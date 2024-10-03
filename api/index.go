@@ -45,7 +45,7 @@ func HandlerBerak(w http.ResponseWriter, r *http.Request) {
 		"tai": func(n int) string {
 			return strings.Repeat("💩", n)
 		},
-	}).ParseGlob("templates/*.html"))
+	}).ParseGlob("../templates/*.html"))
 	controller := berak.NewController(repo, tmpl)
 
 	mux := http.NewServeMux()
