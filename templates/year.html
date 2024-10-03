@@ -1,0 +1,69 @@
+{{ define "year" }}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>💩 Of {{.Year}}</title>
+    </head>
+    <body style="max-width: 80vw; margin: 0 auto">
+        <header>
+            <nav
+                style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                "
+            >
+                <a href="/{{add .Year -1}}">{{add .Year -1}}</a>
+                <h1>{{.Year}}</h1>
+                <a href="/{{add .Year 1}}">{{add .Year 1}}</a>
+            </nav>
+        </header>
+        <main style="text-align: center; min-height: 65vh">
+            <h1 style="text-align: center">💩 Of {{.Year}}</h1>
+            <table
+                style="margin: 0 auto; border-collapse: collapse; width: 50%"
+            >
+                <tr>
+                    <th style="border: 1px solid black; font-weight: bold">
+                        Month
+                    </th>
+                    <th style="border: 1px solid black; font-weight: bold">
+                        💩 Count
+                    </th>
+                </tr>
+                {{ with .Data }} {{ range . }}
+                <tr style="text-align: center">
+                    <td style="border: 1px solid black">
+                        <a href="/{{$.Year}}/{{.Period}}"
+                            >{{getMonthName .Period}}</a
+                        >
+                    </td>
+                    <td style="border: 1px solid black">{{ .Count }}</td>
+                </tr>
+                {{ end }} {{ end }}
+            </table>
+        </main>
+        <footer>
+            <p style="text-align: center; font-weight: bold">
+                Last 💩 was on <span id="last-poop"></span>
+            </p>
+        </footer>
+        <script>
+            const lastPoop = new Date('{{ .LastDataAt }}')
+            document.getElementById('last-poop').textContent = lastPoop
+                .toLocaleString('en-GB', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZoneName: 'short',
+                })
+                .replace(',', ' at')
+        </script>
+    </body>
+</html>
+
+{{ end }}
