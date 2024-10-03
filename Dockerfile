@@ -11,4 +11,4 @@ FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/berak ./
 EXPOSE ${PORT}
-CMD "./twitter-moon"
+CMD "./berak"
