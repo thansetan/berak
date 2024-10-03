@@ -9,6 +9,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o ./berak .
 FROM alpine:latest
 
 WORKDIR /app
-COPY --from=builder /app/berak /app/example.env ./
+COPY --from=builder /app/berak ./
 EXPOSE ${PORT}
 CMD "./twitter-moon"
