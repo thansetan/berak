@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -13,6 +14,9 @@ import (
 	"github.com/thansetan/berak/berak"
 	"github.com/thansetan/berak/db"
 )
+
+//go:embed templates/*
+var templatesFS embed.FS
 
 func main() {
 	db, err := db.NewConn(os.Getenv("POSTGRES_URL"))
@@ -46,7 +50,7 @@ func main() {
 		"tai": func(n int) string {
 			return strings.Repeat("💩", n)
 		},
-	}).ParseGlob("templates/*.html"))
+	}).ParseFS(templatesFS, "*/*.html"))
 	controller := berak.NewController(repo, tmpl)
 
 	mux := http.NewServeMux()
