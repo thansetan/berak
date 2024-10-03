@@ -1,4 +1,4 @@
-package api
+package db
 
 import (
 	"database/sql"
@@ -6,7 +6,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func newConn(dsn string) (*sql.DB, error) {
+func NewConn(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err

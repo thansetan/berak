@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/thansetan/berak/berak"
+	"github.com/thansetan/berak/db"
 )
 
 func HandlerBerak(w http.ResponseWriter, r *http.Request) {
-	db, err := newConn(os.Getenv("POSTGRES_URL"))
+	db, err := db.NewConn(os.Getenv("POSTGRES_URL"))
 	if err != nil {
 		panic(err)
 	}
