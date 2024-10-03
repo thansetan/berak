@@ -62,6 +62,9 @@ func main() {
 	mux.Handle("DELETE /berak", rateLimit(protected(controller.Delete)))
 	mux.HandleFunc("GET /{year}", controller.GetMonthly)
 	mux.HandleFunc("GET /{year}/{month}", controller.GetDaily)
+	mux.HandleFunc("GET /healthcheck", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	})
 	err = http.ListenAndServe(":"+os.Getenv("PORT"), mux)
 	if err != nil {
 		panic(err)
