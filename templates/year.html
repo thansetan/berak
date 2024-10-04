@@ -37,6 +37,7 @@
                         💩 Count
                     </th>
                 </tr>
+                {{ $total := 0 }}
                 {{ with .Data }} {{ range . }}
                 <tr style="text-align: center">
                     <td style="border: 1px solid black">
@@ -45,8 +46,17 @@
                         >
                     </td>
                     <td style="border: 1px solid black">{{ .Count }}</td>
+                    {{ add $total .Count }}
                 </tr>
                 {{ end }} {{ end }}
+                <tr style="text-align: center">
+                    <td style="border: 1px solid black; font-weight: bold">
+                        Total
+                    </td>
+                    <td style="border: 1px solid black; font-weight: bold">
+                        {{ $total }}
+                    </td>
+                </tr>
             </table>
         </main>
         <footer>
