@@ -22,7 +22,7 @@ import (
 //go:embed templates/*
 var templatesFS embed.FS
 
-var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 	AddSource: true,
 }))
 
