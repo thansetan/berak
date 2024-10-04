@@ -39,7 +39,7 @@ func (c *controller) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.logger.InfoContext(r.Context(), "new 💩 added!", "remote_addr", r.RemoteAddr)
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (c *controller) Delete(w http.ResponseWriter, r *http.Request) {
