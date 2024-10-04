@@ -37,8 +37,7 @@
                         💩 Count
                     </th>
                 </tr>
-                {{ $total := 0 }}
-                {{ with .Data }} {{ range . }}
+                {{ $total := 0 }} {{ with .Data }} {{ range . }}
                 <tr style="text-align: center">
                     <td style="border: 1px solid black">
                         <a href="/{{$.Year}}/{{.Period}}"
@@ -46,7 +45,7 @@
                         >
                     </td>
                     <td style="border: 1px solid black">{{ .Count }}</td>
-                    {{ add $total .Count }}
+                    {{ $total = add $total .Count }}
                 </tr>
                 {{ end }} {{ end }}
                 <tr style="text-align: center">
