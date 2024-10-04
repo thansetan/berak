@@ -70,6 +70,7 @@ func main() {
 	mux.HandleFunc("DELETE /berak", rateLimit(protected(http.HandlerFunc(controller.Delete))))
 	mux.HandleFunc("GET /{year}", controller.GetMonthly)
 	mux.HandleFunc("GET /{year}/{month}", controller.GetDaily)
+	mux.HandleFunc("GET /last_poop", controller.GetLastPoopTime)
 	mux.HandleFunc("GET /healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	})

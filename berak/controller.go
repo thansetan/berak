@@ -147,3 +147,19 @@ func (c *controller) fourOFour(w http.ResponseWriter, r *http.Request) {
 		c.logger.ErrorContext(r.Context(), "error executing 404 template", "error", err.Error(), "remote_addr", r.RemoteAddr)
 	}
 }
+
+func (c *controller) GetLastPoopTime(w http.ResponseWriter, r *http.Request) {
+	lastPoopTime, err := c.repo.GetLastDataTimestamp(r.Context())
+	if err != nil {
+		c.logger.ErrorContext(r.Context(), "error getting last poop time", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		return
+	}
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(struct {
+		LastPoopTime time.Time `json:"last_poop_time"`
+	}{
+		LastPoopTime: lastPoopTime,
+	})
+}
