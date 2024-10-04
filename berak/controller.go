@@ -17,7 +17,7 @@ func WriteResponseJSON(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	_ = json.NewEncoder(w).Encode(response{
-		Message: "message",
+		Message: message,
 	})
 }
 
