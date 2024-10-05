@@ -1,4 +1,11 @@
-FROM golang:1.23.2 AS builder
+# Build stage
+FROM golang:1.23.2-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    sqlite-dev
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -6,10 +13,21 @@ RUN go mod tidy
 COPY . .
 RUN CGO_ENABLED=1 GOOS=linux go build -o ./berak .
 
+# Final stage
 FROM alpine:latest
 
+# Install runtime dependencies
+RUN apk add --no-cache \
+    sqlite-libs
+
 WORKDIR /app
+
+# Create data directory
+RUN mkdir -p /data
+
+# Copy binary and SQLite database
 COPY --from=builder /app/berak ./
 COPY --from=builder /app/berak.sqlite3 /data/berak.sqlite3
+
 EXPOSE ${PORT}
-CMD "./berak"
+CMD ["./berak"]
