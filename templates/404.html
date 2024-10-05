@@ -9,19 +9,30 @@
             rel="icon"
             href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>"
         />
+        <style>
+            #fourOFour {
+                font-size: 3rem;
+                font-weight: bold;
+            }
+            #fourOFour::before,
+            #fourOFour::after {
+                content: '💩';
+                color: #f00;
+            }
+        </style>
     </head>
     <body>
-        <div
+        <main
             style="
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                height: 100vh;
+                height: 95vh;
                 font-size: 2em;
             "
         >
-            💩 404 💩
-        </div>
+            <span id="fourOFour">404</span>
+        </main>
     </body>
 </html>
 {{ end }}
