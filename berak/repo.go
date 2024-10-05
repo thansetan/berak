@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -34,7 +35,7 @@ func (r *repo) Add(ctx context.Context) error {
 
 func (r *repo) DeleteLast(ctx context.Context) error {
 	res, err := r.db.ExecContext(ctx, `
-	DELETE FROM berak WHERE id = (SELECT id FROM berak ORDER BY timestamp DESC LIMIT 1)`)
+	DELETE FROM berak WHERE id = (SELECT MAX(id) FROM berak)`)
 	if err != nil {
 		return err
 	}
@@ -51,12 +52,12 @@ type AggData struct {
 
 func (r *repo) GetMonthlyByYear(ctx context.Context, year uint64) ([]AggData, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT
-	EXTRACT(MONTH FROM timestamp) AS month,
-	COUNT(id) berak_count
+	strftime('%m', timestamp) AS month,
+	COUNT(id) AS berak_count
 	FROM berak
-	WHERE EXTRACT(YEAR FROM timestamp) = $1
-	GROUP BY EXTRACT(MONTH FROM timestamp)
-	ORDER BY EXTRACT(MONTH FROM timestamp) ASC;`, year)
+	WHERE strftime('%Y', timestamp) = ?
+	GROUP BY month
+	ORDER BY month ASC;`, fmt.Sprintf("%04d", year))
 	if err != nil {
 		return nil, err
 	}
@@ -76,12 +77,12 @@ func (r *repo) GetMonthlyByYear(ctx context.Context, year uint64) ([]AggData, er
 
 func (r *repo) GetDailyByMonthAndYear(ctx context.Context, year, month uint64) ([]AggData, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT
-	EXTRACT (DAY FROM timestamp),
+	strftime('%d', timestamp) day,
 	COUNT(id) berak_count
 	FROM berak
-	WHERE EXTRACT(YEAR FROM timestamp) = $1 AND EXTRACT(MONTH FROM timestamp) = $2
-	GROUP BY EXTRACT (DAY FROM timestamp)
-	ORDER BY EXTRACT (DAY FROM timestamp) ASC;`, year, month)
+	WHERE strftime('%Y', timestamp) = ? AND strftime('%m', timestamp) = ?
+	GROUP BY day
+	ORDER BY day ASC;`, fmt.Sprintf("%04d", year), fmt.Sprintf("%02d", month))
 	if err != nil {
 		return nil, err
 	}

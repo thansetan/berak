@@ -3,11 +3,11 @@ package db
 import (
 	"database/sql"
 
-	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func NewConn(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -21,13 +21,15 @@ func NewConn(dsn string) (*sql.DB, error) {
 func initDB(db *sql.DB) error {
 	_, err := db.Exec(`
 	CREATE TABLE IF NOT EXISTS berak (
-	ID SERIAL PRIMARY KEY,
-	timestamp TIMESTAMP NOT NULL DEFAULT NOW()
+	ID INTEGER PRIMARY KEY,
+	timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_timestamp ON berak(timestamp);
-	CREATE INDEX IF NOT EXISTS idx_year ON berak(EXTRACT(YEAR FROM timestamp));
-	CREATE INDEX IF NOT EXISTS idx_month ON berak(EXTRACT(MONTH FROM timestamp));
-	CREATE INDEX IF NOT EXISTS idx_day ON berak(EXTRACT(DAY FROM timestamp));
+	CREATE INDEX IF NOT EXISTS idx_ymd ON berak(
+		strftime('%Y', timestamp),
+    	strftime('%m', timestamp),
+    	strftime('%d', timestamp)
+	);
 	`)
 	if err != nil {
 		return err
