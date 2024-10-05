@@ -4,7 +4,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod tidy
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o ./berak .
+RUN CGO_ENABLED=1 GOOS=linux go build -o ./berak .
 
 FROM alpine:latest
 
