@@ -10,5 +10,6 @@ FROM alpine:latest
 
 WORKDIR /app
 COPY --from=builder /app/berak ./
+COPY --from=builder /app/berak.sqlite3 /data/berak.sqlite3
 EXPOSE ${PORT}
 CMD "./berak"

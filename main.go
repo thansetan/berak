@@ -27,24 +27,6 @@ var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 }))
 
 func main() {
-	_, err := os.Stat(os.Getenv("DATA_SOURCE_NAME"))
-	if os.IsNotExist(err) {
-		berakBytes, err := os.ReadFile("./berak.sqlite3")
-		if err != nil {
-			panic(err)
-		}
-		f, err := os.Create(os.Getenv("DATA_SOURCE_NAME"))
-		if err != nil {
-			panic(err)
-		}
-		_, err = f.Write(berakBytes)
-		if err != nil {
-			panic(err)
-		}
-		f.Close()
-		logger.Info("SUCCESS COPPY", "dst", os.Getenv("DATA_SOURCE_NAME"))
-	}
-
 	db, err := db.NewConn(os.Getenv("DATA_SOURCE_NAME"))
 	if err != nil {
 		panic(err)
