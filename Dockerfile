@@ -23,7 +23,6 @@ WORKDIR /app
 RUN mkdir -p /data
 
 COPY --from=builder /app/berak ./
-COPY --from=builder /app/berak.sqlite3 ./
 
 EXPOSE ${PORT}
 CMD ["./berak"]
