@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
@@ -61,7 +62,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	monthlyData, err := c.repo.GetMonthlyByYear(r.Context(), year)
+	monthlyData, err := c.repo.GetMonthlyByYear(r.Context(), year, os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting monthly 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
@@ -73,7 +74,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context())
+	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting last 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
@@ -107,7 +108,7 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		c.fourOFour(w, r)
 		return
 	}
-	dailyData, err := c.repo.GetDailyByMonthAndYear(r.Context(), year, month)
+	dailyData, err := c.repo.GetDailyByMonthAndYear(r.Context(), year, month, os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting daily 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
@@ -117,7 +118,7 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		c.fourOFour(w, r)
 		return
 	}
-	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context())
+	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting last 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
@@ -149,7 +150,7 @@ func (c *controller) fourOFour(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *controller) GetLastPoopTime(w http.ResponseWriter, r *http.Request) {
-	lastPoopTime, err := c.repo.GetLastDataTimestamp(r.Context())
+	lastPoopTime, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting last poop time", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")

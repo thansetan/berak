@@ -60,22 +60,10 @@
         </main>
         <footer>
             <p style="text-align: center; font-weight: bold">
-                Last 💩 on <span id="last-poop"></span>
+                Last 💩 on {{ .LastDataAt.Format "02 January 2006 at 15:04" }}
+                GMT+7
             </p>
         </footer>
-        <script>
-            const lastPoop = new Date('{{ .LastDataAt }}')
-            document.getElementById('last-poop').textContent = lastPoop
-                .toLocaleString('en-GB', {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZoneName: 'short',
-                })
-                .replace(',', ' at')
-        </script>
     </body>
 </html>
 

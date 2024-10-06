@@ -11,9 +11,9 @@ import (
 type repository interface {
 	Add(context.Context) error
 	DeleteLast(context.Context) error
-	GetMonthlyByYear(context.Context, uint64) ([]AggData, error)
-	GetDailyByMonthAndYear(context.Context, uint64, uint64) ([]AggData, error)
-	GetLastDataTimestamp(context.Context) (time.Time, error)
+	GetMonthlyByYear(context.Context, uint64, string) ([]AggData, error)
+	GetDailyByMonthAndYear(context.Context, uint64, uint64, string) ([]AggData, error)
+	GetLastDataTimestamp(context.Context, string) (time.Time, error)
 }
 
 type repo struct {
@@ -50,14 +50,21 @@ type AggData struct {
 	Count  int
 }
 
-func (r *repo) GetMonthlyByYear(ctx context.Context, year uint64) ([]AggData, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT
-	strftime('%m', timestamp) AS month,
-	COUNT(id) AS berak_count
-	FROM berak
+func (r *repo) GetMonthlyByYear(ctx context.Context, year uint64, offset string) ([]AggData, error) {
+	rows, err := r.db.QueryContext(ctx, `
+	WITH timestamp_with_offset AS (
+		SELECT
+			id,
+			DATETIME(timestamp, ?) timestamp
+		FROM berak
+	)
+	SELECT
+		strftime('%m', timestamp) month,
+		COUNT(id)
+	FROM timestamp_with_offset
 	WHERE strftime('%Y', timestamp) = ?
 	GROUP BY month
-	ORDER BY month ASC;`, fmt.Sprintf("%04d", year))
+	ORDER BY month;`, offset, fmt.Sprintf("%04d", year))
 	if err != nil {
 		return nil, err
 	}
@@ -75,14 +82,21 @@ func (r *repo) GetMonthlyByYear(ctx context.Context, year uint64) ([]AggData, er
 	return data, nil
 }
 
-func (r *repo) GetDailyByMonthAndYear(ctx context.Context, year, month uint64) ([]AggData, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT
-	strftime('%d', timestamp) day,
-	COUNT(id) berak_count
-	FROM berak
+func (r *repo) GetDailyByMonthAndYear(ctx context.Context, year, month uint64, offset string) ([]AggData, error) {
+	rows, err := r.db.QueryContext(ctx, `
+	WITH timestamp_with_offset AS (
+		SELECT
+			id,
+			DATETIME(timestamp, ?) timestamp
+		FROM berak
+	)
+	SELECT
+		strftime('%d', timestamp) day,
+		COUNT(id)
+	FROM timestamp_with_offset
 	WHERE strftime('%Y', timestamp) = ? AND strftime('%m', timestamp) = ?
 	GROUP BY day
-	ORDER BY day ASC;`, fmt.Sprintf("%04d", year), fmt.Sprintf("%02d", month))
+	ORDER BY day;`, offset, fmt.Sprintf("%04d", year), fmt.Sprintf("%02d", month))
 	if err != nil {
 		return nil, err
 	}
@@ -100,12 +114,22 @@ func (r *repo) GetDailyByMonthAndYear(ctx context.Context, year, month uint64) (
 	return data, nil
 }
 
-func (r *repo) GetLastDataTimestamp(ctx context.Context) (time.Time, error) {
-	var lastDataAt time.Time
+func (r *repo) GetLastDataTimestamp(ctx context.Context, offset string) (time.Time, error) {
+	var s string
 	err := r.db.QueryRowContext(ctx, `
-	SELECT timestamp FROM berak ORDER BY timestamp DESC LIMIT 1;`).Scan(&lastDataAt)
+	WITH timestamp_with_offset AS (
+		SELECT
+			id,
+			DATETIME(timestamp, ?) timestamp
+		FROM berak
+	)
+	SELECT timestamp FROM timestamp_with_offset ORDER BY timestamp DESC LIMIT 1;`, offset).Scan(&s)
 	if err != nil {
 		return time.Time{}, err
 	}
-	return lastDataAt, nil
+	lastInsertAt, err := time.Parse("2006-01-02 15:04:05", s)
+	if err != nil {
+		return time.Time{}, nil
+	}
+	return lastInsertAt, nil
 }
