@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 type response struct {
@@ -55,7 +57,8 @@ func (c *controller) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
-	yearStr := r.PathValue("year")
+	vars := mux.Vars(r)
+	yearStr := vars["year"]
 	year, err := strconv.ParseUint(yearStr, 10, 64)
 	if err != nil {
 		c.fourOFour(w, r)
@@ -96,13 +99,14 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
-	yearStr := r.PathValue("year")
+	vars := mux.Vars(r)
+	yearStr := vars["year"]
 	year, err := strconv.ParseUint(yearStr, 10, 64)
 	if err != nil {
 		c.fourOFour(w, r)
 		return
 	}
-	monthStr := r.PathValue("month")
+	monthStr := vars["month"]
 	month, err := strconv.ParseUint(monthStr, 10, 8)
 	if err != nil {
 		c.fourOFour(w, r)

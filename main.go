@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/mux"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/thansetan/berak/berak"
 	"github.com/thansetan/berak/db"
@@ -21,6 +23,9 @@ import (
 
 //go:embed templates/*
 var templatesFS embed.FS
+
+//go:embed static/*
+var staticDirFS embed.FS
 
 var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 	AddSource: true,
@@ -61,21 +66,30 @@ func main() {
 	}).ParseFS(templatesFS, "*/*.html"))
 	controller := berak.NewController(repo, tmpl, logger)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+	r := mux.NewRouter()
+	r.Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
 		http.Redirect(w, r, fmt.Sprintf("/%d", now.Year()), http.StatusTemporaryRedirect)
 	})
-	mux.HandleFunc("POST /berak", rateLimit(protected(http.HandlerFunc(controller.Create))))
-	mux.HandleFunc("DELETE /berak", rateLimit(protected(http.HandlerFunc(controller.Delete))))
-	mux.HandleFunc("GET /{year}", controller.GetMonthly)
-	mux.HandleFunc("GET /{year}/{month}", controller.GetDaily)
-	mux.HandleFunc("GET /last_poop", controller.GetLastPoopTime)
-	mux.HandleFunc("GET /healthcheck", func(w http.ResponseWriter, r *http.Request) {
+	r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Create)))).Methods(http.MethodPost)
+	r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Delete)))).Methods(http.MethodDelete)
+	r.Path("/{year:[0-9]+}").HandlerFunc(controller.GetMonthly).Methods(http.MethodGet)
+	r.Path("/{year:[0-9]+}/{month:[0-9]+}").HandlerFunc(controller.GetDaily).Methods(http.MethodGet)
+	r.Path("/last_poop").HandlerFunc(controller.GetLastPoopTime).Methods(http.MethodGet)
+	r.Path("/healthcheck").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	})
+
+	staticFilesFS, err := fs.Sub(staticDirFS, "static")
+	if err != nil {
+		logger.Error("static dir doesn't exists!")
+		os.Exit(1)
+	}
+
+	r.PathPrefix("/").Handler(http.FileServer(http.FS(staticFilesFS)))
+
 	srv := new(http.Server)
-	srv.Handler = logRequest(mux)
+	srv.Handler = logRequest(r)
 	srv.Addr = fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT"))
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
