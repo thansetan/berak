@@ -35,36 +35,41 @@
             </nav>
         </header>
         <main style="text-align: center; min-height: 65vh">
-            <h1 style="text-align: center">💩 {{ .Year }} 💩</h1>
-            <table style="margin: 0 auto; border-collapse: collapse">
-                <tr>
-                    <th style="border: 1px solid black; font-weight: bold">
-                        Month
-                    </th>
-                    <th style="border: 1px solid black; font-weight: bold">
-                        💩 Count
-                    </th>
-                </tr>
-                {{ $total := 0 }} {{ with .Data }} {{ range . }}
-                <tr style="text-align: center">
-                    <td style="border: 1px solid black">
-                        <a href="/{{$.Year}}/{{.Period}}"
-                            >{{getMonthName .Period}}</a
-                        >
-                    </td>
-                    <td style="border: 1px solid black">{{ .Count }}</td>
-                    {{ $total = add $total .Count }}
-                </tr>
-                {{ end }} {{ end }}
-                <tr style="text-align: center">
-                    <td style="border: 1px solid black; font-weight: bold">
-                        Total
-                    </td>
-                    <td style="border: 1px solid black; font-weight: bold">
-                        {{ $total }}
-                    </td>
-                </tr>
-            </table>
+            <div id="poop-log" style="padding: 30px 15px">
+                <h1 style="text-align: center">💩 {{ .Year }} 💩</h1>
+                <table style="margin: 0 auto; border-collapse: collapse">
+                    <tr>
+                        <th style="border: 1px solid black; font-weight: bold">
+                            Month
+                        </th>
+                        <th style="border: 1px solid black; font-weight: bold">
+                            💩 Count
+                        </th>
+                    </tr>
+                    {{ $total := 0 }} {{ with .Data }} {{ range . }}
+                    <tr style="text-align: center">
+                        <td style="border: 1px solid black">
+                            <a href="/{{$.Year}}/{{.Period}}"
+                                >{{getMonthName .Period}}</a
+                            >
+                        </td>
+                        <td style="border: 1px solid black">{{ .Count }}</td>
+                        {{ $total = add $total .Count }}
+                    </tr>
+                    {{ end }} {{ end }}
+                    <tr style="text-align: center">
+                        <td style="border: 1px solid black; font-weight: bold">
+                            Total
+                        </td>
+                        <td style="border: 1px solid black; font-weight: bold">
+                            {{ $total }}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <button onclick="saveImage()" style="margin-top: 20px">
+                Save as Image
+            </button>
         </main>
         <footer>
             <p style="text-align: center; font-weight: bold">
@@ -72,6 +77,27 @@
                 GMT+7
             </p>
         </footer>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"
+            integrity="sha512-01CJ9/g7e8cUmY0DFTMcUw/ikS799FHiOA0eyHsUWfOetgbx/t6oV4otQ5zXKQyIrQGTHSmRVPIgrgLcZi/WMA=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"
+        ></script>
+        <script>
+            function saveImage() {
+                const node = document.querySelector('#poop-log')
+                domtoimage
+                    .toPng(node, {
+                        bgcolor: 'white',
+                    })
+                    .then(function (dataUrl) {
+                        const link = document.createElement('a')
+                        link.download = 'poop-log-{{.Year}}.png'
+                        link.href = dataUrl
+                        link.click()
+                    })
+            }
+        </script>
     </body>
 </html>
 
