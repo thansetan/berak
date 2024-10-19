@@ -67,6 +67,10 @@ func main() {
 	controller := berak.NewController(repo, tmpl, logger)
 
 	r := mux.NewRouter()
+
+	r.NotFoundHandler = http.HandlerFunc(controller.FourOFour)
+	r.MethodNotAllowedHandler = http.HandlerFunc(controller.FourOFour)
+
 	r.Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
 		http.Redirect(w, r, fmt.Sprintf("/%d", now.Year()), http.StatusTemporaryRedirect)
@@ -86,7 +90,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	r.PathPrefix("/").Handler(http.FileServer(http.FS(staticFilesFS)))
+	r.PathPrefix("/").Handler(http.StripPrefix("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fsHandler := http.FileServer(http.FS(staticFilesFS))
+		if _, err := staticFilesFS.Open(r.URL.Path); os.IsNotExist(err) {
+			controller.FourOFour(w, r)
+			return
+		}
+		fsHandler.ServeHTTP(w, r)
+	})))
 
 	srv := new(http.Server)
 	srv.Handler = logRequest(r)
@@ -148,19 +159,19 @@ func rateLimit(next http.Handler) http.HandlerFunc {
 	}
 }
 
-type wrapperResponseWriter struct {
+type wrappedResponseWriter struct {
 	http.ResponseWriter
 	code int
 }
 
-func (wrw *wrapperResponseWriter) WriteHeader(code int) {
+func (wrw *wrappedResponseWriter) WriteHeader(code int) {
 	wrw.code = code
 	wrw.ResponseWriter.WriteHeader(code)
 }
 
 func logRequest(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		wrw := &wrapperResponseWriter{
+		wrw := &wrappedResponseWriter{
 			ResponseWriter: w,
 		}
 		t0 := time.Now()

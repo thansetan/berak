@@ -61,7 +61,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 	yearStr := vars["year"]
 	year, err := strconv.ParseUint(yearStr, 10, 64)
 	if err != nil {
-		c.fourOFour(w, r)
+		c.FourOFour(w, r)
 		return
 	}
 
@@ -73,7 +73,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(monthlyData) == 0 {
-		c.fourOFour(w, r)
+		c.FourOFour(w, r)
 		return
 	}
 
@@ -103,13 +103,13 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 	yearStr := vars["year"]
 	year, err := strconv.ParseUint(yearStr, 10, 64)
 	if err != nil {
-		c.fourOFour(w, r)
+		c.FourOFour(w, r)
 		return
 	}
 	monthStr := vars["month"]
 	month, err := strconv.ParseUint(monthStr, 10, 8)
 	if err != nil {
-		c.fourOFour(w, r)
+		c.FourOFour(w, r)
 		return
 	}
 	dailyData, err := c.repo.GetDailyByMonthAndYear(r.Context(), year, month, os.Getenv("TIME_OFFSET"))
@@ -119,7 +119,7 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(dailyData) == 0 {
-		c.fourOFour(w, r)
+		c.FourOFour(w, r)
 		return
 	}
 	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
@@ -145,7 +145,7 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (c *controller) fourOFour(w http.ResponseWriter, r *http.Request) {
+func (c *controller) FourOFour(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	err := c.tmpl.ExecuteTemplate(w, "404", nil)
 	if err != nil {
