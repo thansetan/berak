@@ -4,6 +4,35 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:site" content="@thansetan" />
+        <meta name="twitter:author" content="@thansetan" />
+        <meta
+            name="twitter:title"
+            content="{{ getMonthName .Month }} {{.Year}} | 💩 Log"
+        />
+        <meta
+            name="twitter:description"
+            content="thansetan's poop log of
+            {{getMonthName .Month}} {{.Year}}"
+        />
+
+        <meta
+            property="og:title"
+            content="{{ getMonthName .Month }} {{.Year}} | 💩 Log"
+        />
+        <meta
+            property="og:description"
+            content="thansetan's poop log of
+            {{getMonthName .Month}} {{.Year}}"
+        />
+        <meta property="og:type" content="website" />
+        <meta
+            property="og:url"
+            content="https://poop.thansetan.me/{{.Year}}/{{.Month}}"
+        />
+
         <title>{{ getMonthName .Month }} {{.Year}} | 💩 Log</title>
         <link
             rel="icon"
