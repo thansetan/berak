@@ -128,6 +128,18 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
 		return
 	}
+	maxDate := dailyData[len(dailyData)-1].Period
+	dailyDataComplete := make([]AggData, 0, maxDate)
+
+	curr := 1
+	for _, d := range dailyData {
+		for ; curr < d.Period; curr++ {
+			dailyDataComplete = append(dailyDataComplete, AggData{Period: curr})
+		}
+		dailyDataComplete = append(dailyDataComplete, d)
+		curr++
+	}
+
 	w.WriteHeader(http.StatusOK)
 	err = c.tmpl.ExecuteTemplate(w, "month", struct {
 		LastDataAt time.Time
@@ -137,7 +149,7 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 	}{
 		Year:       int(year),
 		Month:      int(month),
-		Data:       dailyData,
+		Data:       dailyDataComplete,
 		LastDataAt: lastDataAt,
 	})
 	if err != nil {
