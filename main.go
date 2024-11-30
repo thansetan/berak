@@ -61,6 +61,7 @@ func main() {
 			}[monthNumber-1]
 		},
 		"tai": func(n int) string {
+    if n == 0 {return "-"}
 			return strings.Repeat("💩", n)
 		},
 	}).ParseFS(templatesFS, "*/*.html"))
