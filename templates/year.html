@@ -105,9 +105,12 @@
             </button>
         </main>
         <footer>
-            <p style="text-align: center; font-weight: bold">
+            <p style="text-align: center; font-weight: bold; margin-bottom: 0;">
                 Last 💩 on {{ .LastDataAt.Format "02 January 2006 at 15:04" }}
                 GMT+7
+            </p>
+            <p style="text-align: center; font-weight: bold; margin-top: 0">
+                (Current time: {{ .CurrentTime.Format "02 January 2006 15:04"}} GMT+7)
             </p>
         </footer>
         <script

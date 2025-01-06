@@ -2,7 +2,6 @@ package berak
 
 import (
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -66,20 +65,19 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	now := time.Now().UTC().Add(7 * time.Hour)
 	monthlyData, err := c.repo.GetMonthlyByYear(r.Context(), year, os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting monthly 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
 		return
 	}
-	fmt.Println("DATANYA ADA: ", len(monthlyData))
 	if len(monthlyData) == 0 {
 		c.FourOFour(w, r)
 		return
 	}
 
-	maxMonth := monthlyData[len(monthlyData)-1].Period
-	completeMonthlyData := make([]AggData, 0, maxMonth)
+	completeMonthlyData := make([]AggData, 0, now.Month())
 
 	curr := 1
 	for _, d := range monthlyData {
@@ -89,7 +87,13 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		completeMonthlyData = append(completeMonthlyData, d)
 		curr++
 	}
-	fmt.Println(completeMonthlyData, " INIIIIIIIIIIIIIII")
+	lastMonth := int(now.Month())
+	if year < uint64(now.Year()) {
+		lastMonth = 12
+	}
+	for ; curr <= lastMonth; curr++ {
+		completeMonthlyData = append(completeMonthlyData, AggData{Period: curr})
+	}
 	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting last 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
@@ -98,13 +102,15 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	err = c.tmpl.ExecuteTemplate(w, "year", struct {
-		LastDataAt time.Time
-		Data       []AggData
-		Year       int
+		LastDataAt  time.Time
+		Data        []AggData
+		Year        int
+		CurrentTime time.Time
 	}{
-		Year:       int(year),
-		Data:       completeMonthlyData,
-		LastDataAt: lastDataAt,
+		Year:        int(year),
+		Data:        completeMonthlyData,
+		LastDataAt:  lastDataAt,
+		CurrentTime: now,
 	})
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error executing year template", "error", err.Error(), "remote_addr", r.RemoteAddr)
@@ -119,6 +125,8 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		c.FourOFour(w, r)
 		return
 	}
+
+	now := time.Now().UTC().Add(7 * time.Hour)
 	monthStr := vars["month"]
 	month, err := strconv.ParseUint(monthStr, 10, 8)
 	if err != nil {
@@ -141,8 +149,7 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
 		return
 	}
-	maxDate := dailyData[len(dailyData)-1].Period
-	dailyDataComplete := make([]AggData, 0, maxDate)
+	dailyDataComplete := make([]AggData, 0, now.Day())
 
 	curr := 1
 	for _, d := range dailyData {
@@ -152,18 +159,23 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		dailyDataComplete = append(dailyDataComplete, d)
 		curr++
 	}
+	for ; curr <= now.Day(); curr++ {
+		dailyDataComplete = append(dailyDataComplete, AggData{Period: curr})
+	}
 
 	w.WriteHeader(http.StatusOK)
 	err = c.tmpl.ExecuteTemplate(w, "month", struct {
-		LastDataAt time.Time
-		Data       []AggData
-		Year       int
-		Month      int
+		LastDataAt  time.Time
+		Data        []AggData
+		Year        int
+		Month       int
+		CurrentTime time.Time
 	}{
-		Year:       int(year),
-		Month:      int(month),
-		Data:       dailyDataComplete,
-		LastDataAt: lastDataAt,
+		Year:        int(year),
+		Month:       int(month),
+		Data:        dailyDataComplete,
+		LastDataAt:  lastDataAt,
+		CurrentTime: now,
 	})
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error executing month template", "error", err.Error(), "remote_addr", r.RemoteAddr)
