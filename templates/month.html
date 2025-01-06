@@ -71,7 +71,9 @@
                     >{{ getMonthName $prevMonth }}</a
                 >
                 {{ else }}
-                <a></a>
+                <a href="/{{add .Year -1}}/12"
+                    >{{ getMonthName 12 }} {{add .Year -1}}</a
+                >
                 {{ end }}
                 <h1>{{getMonthName .Month}}</h1>
                 {{ if lt .Month 12 }} {{ $nextMonth := add .Month 1 }}
@@ -79,7 +81,9 @@
                     >{{ getMonthName $nextMonth }}</a
                 >
                 {{ else }}
-                <a></a>
+                <a href="/{{add .Year 1}}/1"
+                    >{{ getMonthName 1 }} {{add .Year 1}}</a
+                >
                 {{ end }}
             </nav>
         </header>
