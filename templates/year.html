@@ -78,11 +78,15 @@
                     {{ $total := 0 }} {{ with .Data }} {{ range . }}
                     <tr style="text-align: center">
                         <td style="border: 1px solid black">
+                            {{ if gt .Count 0 }}
                             <a href="/{{$.Year}}/{{.Period}}"
                                 >{{getMonthName .Period}}</a
                             >
+                            {{ else }}
+                            {{getMonthName .Period}}
+                            {{ end }}
                         </td>
-                        <td style="border: 1px solid black">{{ .Count }}</td>
+                        <td style="border: 1px solid black">{{ if gt .Count 0 }}{{ .Count }}{{else}} - {{end}}</td>
                         {{ $total = add $total .Count }}
                     </tr>
                     {{ end }} {{ end }}

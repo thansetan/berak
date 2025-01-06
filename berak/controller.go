@@ -2,6 +2,7 @@ package berak
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -71,12 +72,24 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
 		return
 	}
-
+	fmt.Println("DATANYA ADA: ", len(monthlyData))
 	if len(monthlyData) == 0 {
 		c.FourOFour(w, r)
 		return
 	}
 
+	maxMonth := monthlyData[len(monthlyData)-1].Period
+	completeMonthlyData := make([]AggData, 0, maxMonth)
+
+	curr := 1
+	for _, d := range monthlyData {
+		for ; curr < d.Period; curr++ {
+			completeMonthlyData = append(completeMonthlyData, AggData{Period: curr})
+		}
+		completeMonthlyData = append(completeMonthlyData, d)
+		curr++
+	}
+	fmt.Println(completeMonthlyData, " INIIIIIIIIIIIIIII")
 	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting last 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
@@ -90,7 +103,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		Year       int
 	}{
 		Year:       int(year),
-		Data:       monthlyData,
+		Data:       completeMonthlyData,
 		LastDataAt: lastDataAt,
 	})
 	if err != nil {
