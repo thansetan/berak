@@ -65,19 +65,24 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// UTC + 7
 	now := time.Now().UTC().Add(7 * time.Hour)
+	if year < 1 || year > uint64(now.Year()) {
+		c.FourOFour(w, r)
+		return
+	}
 	monthlyData, err := c.repo.GetMonthlyByYear(r.Context(), year, os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting monthly 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
 		return
 	}
-	if len(monthlyData) == 0 {
-		c.FourOFour(w, r)
-		return
-	}
 
-	completeMonthlyData := make([]AggData, 0, now.Month())
+	maxMonth := now.Month()
+	if year < uint64(now.Year()) {
+		maxMonth = 12
+	}
+	completeMonthlyData := make([]AggData, 0, maxMonth)
 
 	curr := 1
 	for _, d := range monthlyData {
@@ -87,11 +92,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		completeMonthlyData = append(completeMonthlyData, d)
 		curr++
 	}
-	lastMonth := int(now.Month())
-	if year < uint64(now.Year()) {
-		lastMonth = 12
-	}
-	for ; curr <= lastMonth; curr++ {
+	for ; curr <= int(maxMonth); curr++ {
 		completeMonthlyData = append(completeMonthlyData, AggData{Period: curr})
 	}
 	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
@@ -126,10 +127,23 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// UTC + 7
 	now := time.Now().UTC().Add(7 * time.Hour)
+	if year < 1 || year > uint64(now.Year()) {
+		c.FourOFour(w, r)
+		return
+	}
 	monthStr := vars["month"]
 	month, err := strconv.ParseUint(monthStr, 10, 8)
 	if err != nil {
+		c.FourOFour(w, r)
+		return
+	}
+	if year == uint64(now.Year()) && month > uint64(now.Month()) {
+		c.FourOFour(w, r)
+		return
+	}
+	if _, ok := monthDays[int(month)]; !ok {
 		c.FourOFour(w, r)
 		return
 	}
@@ -139,17 +153,21 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
 		return
 	}
-	if len(dailyData) == 0 {
-		c.FourOFour(w, r)
-		return
-	}
+
 	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting last 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
 		return
 	}
-	dailyDataComplete := make([]AggData, 0, now.Day())
+	maxDays := now.Day()
+	if year < uint64(now.Year()) || (year == uint64(now.Year()) && month < uint64(now.Month())) {
+		maxDays = monthDays[int(month)]
+		if month == 2 && isLeapYear(int(year)) {
+			maxDays++
+		}
+	}
+	dailyDataComplete := make([]AggData, 0, maxDays)
 
 	curr := 1
 	for _, d := range dailyData {
@@ -159,7 +177,7 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		dailyDataComplete = append(dailyDataComplete, d)
 		curr++
 	}
-	for ; curr <= now.Day(); curr++ {
+	for ; curr <= maxDays; curr++ {
 		dailyDataComplete = append(dailyDataComplete, AggData{Period: curr})
 	}
 

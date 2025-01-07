@@ -6,32 +6,73 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>404 | 💩 Log</title>
         <link
-            rel="icon"
+            rel="icon" 
             href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>"
         />
         <style>
-            #fourOFour {
-                font-size: 3rem;
-                font-weight: bold;
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
             }
-            #fourOFour::before,
-            #fourOFour::after {
+
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: #f8f9fa;
+                color: #343a40;
+            }
+
+            main {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                gap: 2rem;
+                padding: 1rem;
+            }
+
+            #fourOFour {
+                font-size: 5rem;
+                font-weight: bold;
+                animation: bounce 1s ease infinite;
+            }
+
+            .poop::before,
+            .poop::after {
                 content: '💩';
-                color: #f00;
+                display: inline-block;
+                margin: 0 0.5rem;
+                animation: spin 2s linear infinite;
+            }
+
+            a {
+                color: #495057;
+                text-decoration: none;
+                padding: 0.5rem 1rem;
+                border-radius: 8px;
+                transition: all 0.2s ease;
+                border: 2px solid #495057;
+            }
+
+            a:hover {
+                background: #495057;
+                color: #fff;
+            }
+
+            @keyframes bounce {
+                50% { transform: translateY(-10px); }
+            }
+
+            @keyframes spin {
+                100% { transform: rotate(360deg); }
             }
         </style>
     </head>
     <body>
-        <main
-            style="
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 95vh;
-                font-size: 2em;
-            "
-        >
-            <span id="fourOFour">404</span>
+        <main>
+            <span id="fourOFour" class="poop">404</span>
+            <a href="/" class="poop">Home</a>
         </main>
     </body>
 </html>

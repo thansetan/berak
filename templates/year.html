@@ -58,12 +58,20 @@
                     align-items: center;
                 "
             >
+                {{ if gt .Year 1 }}
                 <a href="/{{add .Year -1}}">{{add .Year -1}}</a>
+                {{ else }}
+                <span></span>
+                {{ end }}
                 <h1>{{.Year}}</h1>
+                {{ if lt .Year .CurrentTime.Year }}
                 <a href="/{{add .Year 1}}">{{add .Year 1}}</a>
+                {{ else }}
+                <span></span>
+                {{ end }}
             </nav>
             <p style="text-align: center; margin: 0">
-                Current time: <span id="currentTime"></span>
+                Current time: <span id="currentTime">{{.CurrentTime.Format "02 January 2006 15:04:05"}}</span>
                 GMT+7
             </p>
         </header>
@@ -82,11 +90,9 @@
                     {{ $total := 0 }} {{ with .Data }} {{ range . }}
                     <tr style="text-align: center">
                         <td style="border: 1px solid black">
-                            {{ if gt .Count 0 }}
                             <a href="/{{$.Year}}/{{.Period}}"
                                 >{{getMonthName .Period}}</a
                             >
-                            {{ else }} {{getMonthName .Period}} {{ end }}
                         </td>
                         <td style="border: 1px solid black">
                             {{ if gt .Count 0 }}{{ .Count }}{{else}} - {{end}}
@@ -121,6 +127,36 @@
             referrerpolicy="no-referrer"
         ></script>
         <script>
+            window.addEventListener("DOMContentLoaded", () => {
+                const currentTimeElem = document.querySelector('#currentTime')
+                setInterval(() => {
+                    let currentTime = new Date();
+                    const dateOptions = {
+                        timeZone: 'Asia/Jakarta',
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                    }
+                    const timeOptions = {
+                        timeZone: 'Asia/Jakarta',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false,
+                    }
+    
+                    const formattedDate = currentTime.toLocaleDateString(
+                        'en-GB',
+                        dateOptions
+                    )
+                    const formattedTime = currentTime.toLocaleTimeString(
+                        'en-GB',
+                        timeOptions
+                    )
+    
+                    currentTimeElem.textContent = `${formattedDate} ${formattedTime}`
+                }, 1000)
+            })
             const saveImage = () => {
                 const node = document.querySelector('#poop-log')
                 domtoimage
@@ -134,37 +170,7 @@
                         link.click()
                     })
             }
-            const currentTimeElem = document.querySelector('#currentTime')
-            setInterval(() => {
-                const currentTime = new Date()
-
-                const dateOptions = {
-                    timeZone: 'Asia/Jakarta',
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric',
-                }
-                const timeOptions = {
-                    timeZone: 'Asia/Jakarta',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false,
-                }
-
-                const formattedDate = currentTime.toLocaleDateString(
-                    'en-GB',
-                    dateOptions
-                )
-                const formattedTime = currentTime.toLocaleTimeString(
-                    'en-GB',
-                    timeOptions
-                )
-
-                currentTimeElem.textContent = `${formattedDate} ${formattedTime}`
-            }, 1000)
         </script>
     </body>
 </html>
-
 {{ end }}

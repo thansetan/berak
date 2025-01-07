@@ -66,6 +66,7 @@
                     align-items: center;
                 "
             >
+                {{ if gt .Year 1 }}
                 {{ if gt .Month 1 }} {{ $prevMonth := add .Month -1 }}
                 <a href="/{{.Year}}/{{ $prevMonth }}"
                     >{{ getMonthName $prevMonth }}</a
@@ -75,7 +76,11 @@
                     >{{ getMonthName 12 }} {{add .Year -1}}</a
                 >
                 {{ end }}
+                {{ else }}
+                <span></span>
+                {{ end }}
                 <h1>{{getMonthName .Month}}</h1>
+                {{ if or (lt .Year .CurrentTime.Year) (lt .Month .CurrentTime.Month) }}
                 {{ if lt .Month 12 }} {{ $nextMonth := add .Month 1 }}
                 <a href="/{{.Year}}/{{ $nextMonth }}"
                     >{{ getMonthName $nextMonth }}</a
@@ -85,16 +90,21 @@
                     >{{ getMonthName 1 }} {{add .Year 1}}</a
                 >
                 {{ end }}
+                {{ else }}
+                <span></span>
+                {{ end }}
             </nav>
             <p style="text-align: center; margin: 0">
-                Current time: <span id="currentTime"></span>
+                Current time: <span id="currentTime">{{ .CurrentTime.Format "02 January 2006 15:04:05" }}</span>
                 GMT+7
             </p>
         </header>
         <main style="text-align: center; min-height: 65vh">
             <div id="poop-log" style="padding: 5px 15px 30px 15px">
                 <h1 style="text-align: center">
-                    💩 {{getMonthName .Month}} {{ .Year }} 💩
+                    💩 {{getMonthName .Month}} <a style="text-decoration: none;" href="/{{.Year}}">
+                        {{ .Year }}
+                    </a> 💩
                 </h1>
                 <table style="margin: 0 auto; border-collapse: collapse">
                     <tr>
