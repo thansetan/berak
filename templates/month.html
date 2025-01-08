@@ -119,7 +119,11 @@
                     <tr style="text-align: center">
                         <td style="border: 1px solid black">{{ .Period }}</td>
                         <td style="border: 1px solid black">
+                            {{ if and (eq .Period $.CurrentTime.Day ) (eq .Count 0)}}
+                            0
+                            {{ else }}
                             {{ tai .Count }}
+                            {{ end }}
                         </td>
                     </tr>
                     {{ $sum = add $sum .Count }} {{ end }} {{ end }}
