@@ -67,7 +67,7 @@
                 {{ if lt .Year .CurrentTime.Year }}
                 <a href="/{{add .Year 1}}">{{add .Year 1}}</a>
                 {{ else }}
-                <span></span>
+                <span>{{ add .Year 1}}</span>
                 {{ end }}
             </nav>
             <p style="text-align: center; margin: 0">

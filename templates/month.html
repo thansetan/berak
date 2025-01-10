@@ -91,7 +91,11 @@
                 >
                 {{ end }}
                 {{ else }}
-                <span></span>
+                {{ if lt .Month 12 }}
+                <span>{{ getMonthName (add .Month 1) }}</span>
+                {{ else }}
+                <span>{{ getMonthName 1 }} {{add .Year 1}}</span>
+                {{ end }}
                 {{ end }}
             </nav>
             <p style="text-align: center; margin: 0">
