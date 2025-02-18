@@ -86,6 +86,7 @@ func main() {
 	r.Path("/healthcheck").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	})
+	r.Path("/download").HandlerFunc(protected(http.HandlerFunc(controller.GetSQLiteFile))).Methods(http.MethodGet)
 
 	staticFilesFS, err := fs.Sub(staticDirFS, "static")
 	if err != nil {

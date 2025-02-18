@@ -223,3 +223,16 @@ func (c *controller) GetLastPoopTime(w http.ResponseWriter, r *http.Request) {
 		LastPoopTime: lastPoopTime,
 	})
 }
+
+func (c *controller) GetSQLiteFile(w http.ResponseWriter, r *http.Request) {
+	filePath := os.Getenv("DATA_SOURCE_NAME")
+	_, err := os.Stat(filePath)
+	if err != nil {
+		c.logger.ErrorContext(r.Context(), "file doesn't exist", "error", err)
+		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		return
+	}
+	w.Header().Set("Content-Disposition", "attachment; filename=berak.sqlite3")
+	w.Header().Set("Content-Type", "application/octet-stream")
+	http.ServeFile(w, r, filePath)
+}
