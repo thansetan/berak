@@ -1,176 +1,164 @@
 {{ define "year" }}
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        <meta name="twitter:card" content="summary" />
-        <meta name="twitter:site" content="@thansetan" />
-        <meta name="twitter:author" content="@thansetan" />
-        <meta name="twitter:title" content="{{.Year}} | 💩 Log" />
-        <meta
-            name="twitter:description"
-            content="thansetan's poop log of {{.Year}}"
-        />
-        <meta
-            name="twitter:image"
-            content="https://poop.thansetan.foo/img/poop.png"
-        />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@thansetan" />
+    <meta name="twitter:author" content="@thansetan" />
+    <meta name="twitter:title" content="{{.Year}} | 💩 Log" />
+    <meta
+      name="twitter:description"
+      content="thansetan's poop log of {{.Year}}"
+    />
+    <meta
+      name="twitter:image"
+      content="https://poop.thansetan.foo/img/poop.png"
+    />
 
-        <meta property="og:title" content="{{.Year}} | 💩 Log" />
-        <meta
-            property="og:description"
-            content="thansetan's poop log of {{.Year}}"
-        />
-        <meta property="og:type" content="website" />
-        <meta
-            property="og:url"
-            content="https://poop.thansetan.foo/{{.Year}}"
-        />
-        <meta
-            property="og:image"
-            content="https://poop.thansetan.foo/img/poop.png"
-        />
+    <meta property="og:title" content="{{.Year}} | 💩 Log" />
+    <meta
+      property="og:description"
+      content="thansetan's poop log of {{.Year}}"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://poop.thansetan.foo/{{.Year}}" />
+    <meta
+      property="og:image"
+      content="https://poop.thansetan.foo/img/poop.png"
+    />
 
-        <title>{{.Year}} | 💩 Log</title>
-        <link
-            rel="icon"
-            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>"
-        />
-        <style>
-            table {
-                width: 50%;
-            }
-            @media (max-width: 768px) {
-                table {
-                    width: 100%;
-                }
-            }
-        </style>
-    </head>
-    <body style="max-width: 80vw; margin: 0 auto">
-        <header>
-            <nav
-                style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                "
-            >
-                {{ if gt .Year 1 }}
-                <a href="/{{add .Year -1}}">{{add .Year -1}}</a>
-                {{ else }}
-                <span></span>
-                {{ end }}
-                <h1>{{.Year}}</h1>
-                {{ if lt .Year .CurrentTime.Year }}
-                <a href="/{{add .Year 1}}">{{add .Year 1}}</a>
-                {{ else }}
-                <span>{{ add .Year 1}}</span>
-                {{ end }}
-            </nav>
-            <p style="text-align: center; margin: 0">
-                Current time: <span id="currentTime">{{.CurrentTime.Format "02 January 2006 15:04:05"}}</span>
-                GMT+7
-            </p>
-        </header>
-        <main style="text-align: center; min-height: 65vh">
-            <div id="poop-log" style="padding: 5px 15px 30px 15px">
-                <h1 style="text-align: center">💩 {{ .Year }} 💩</h1>
-                <table style="margin: 0 auto; border-collapse: collapse">
-                    <tr>
-                        <th style="border: 1px solid black; font-weight: bold">
-                            Month
-                        </th>
-                        <th style="border: 1px solid black; font-weight: bold">
-                            💩 Count
-                        </th>
-                    </tr>
-                    {{ $total := 0 }} {{ with .Data }} {{ range . }}
-                    <tr style="text-align: center">
-                        <td style="border: 1px solid black">
-                            <a href="/{{$.Year}}/{{.Period}}"
-                                >{{getMonthName .Period}}</a
-                            >
-                        </td>
-                        <td style="border: 1px solid black">
-                            {{ if gt .Count 0 }}{{ .Count }}{{else}} - {{end}}
-                        </td>
-                        {{ $total = add $total .Count }}
-                    </tr>
-                    {{ end }} {{ end }}
-                    <tr style="text-align: center">
-                        <td style="border: 1px solid black; font-weight: bold">
-                            Total
-                        </td>
-                        <td style="border: 1px solid black; font-weight: bold">
-                            {{ $total }}
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            <button onclick="saveImage()" style="margin-top: 20px">
-                Save as Image
-            </button>
-        </main>
-        <footer>
-            <p style="text-align: center; font-weight: bold">
-                Last 💩 on {{ .LastDataAt.Format "02 January 2006 at 15:04" }}
-                GMT+7
-            </p>
-        </footer>
-        <script
-            src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"
-            integrity="sha512-01CJ9/g7e8cUmY0DFTMcUw/ikS799FHiOA0eyHsUWfOetgbx/t6oV4otQ5zXKQyIrQGTHSmRVPIgrgLcZi/WMA=="
-            crossorigin="anonymous"
-            referrerpolicy="no-referrer"
-        ></script>
-        <script>
-            window.addEventListener("DOMContentLoaded", () => {
-                const currentTimeElem = document.querySelector('#currentTime')
-                setInterval(() => {
-                    let currentTime = new Date();
-                    const dateOptions = {
-                        timeZone: 'Asia/Jakarta',
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric',
-                    }
-                    const timeOptions = {
-                        timeZone: 'Asia/Jakarta',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: false,
-                    }
-    
-                    const formattedDate = currentTime.toLocaleDateString(
-                        'en-GB',
-                        dateOptions
-                    )
-                    const formattedTime = currentTime.toLocaleTimeString(
-                        'en-GB',
-                        timeOptions
-                    )
-    
-                    currentTimeElem.textContent = `${formattedDate} ${formattedTime}`
-                }, 1000)
-            })
-            const saveImage = () => {
-                const node = document.querySelector('#poop-log')
-                domtoimage
-                    .toPng(node, {
-                        bgcolor: 'white',
-                    })
-                    .then(function (dataUrl) {
-                        const link = document.createElement('a')
-                        link.download = 'poop-log-{{.Year}}.png'
-                        link.href = dataUrl
-                        link.click()
-                    })
-            }
-        </script>
-    </body>
+    <title>{{.Year}} | 💩 Log</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>"
+    />
+    <style>
+      table {
+        width: 50%;
+      }
+      @media (max-width: 768px) {
+        table {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body style="max-width: 80vw; margin: 0 auto">
+    <header>
+      <nav
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        "
+      >
+        {{ if gt .Year 1 }}
+        <a href="/{{add .Year -1}}">{{add .Year -1}}</a>
+        {{ else }}
+        <span></span>
+        {{ end }}
+        <h1>{{.Year}}</h1>
+        {{ if lt .Year .CurrentTime.Year }}
+        <a href="/{{add .Year 1}}">{{add .Year 1}}</a>
+        {{ else }}
+        <span>{{ add .Year 1}}</span>
+        {{ end }}
+      </nav>
+      <p style="text-align: center; margin: 0">
+        Current time:
+        <span id="currentTime"
+          >{{.CurrentTime.Format "02 January 2006 15:04:05"}}</span
+        >
+        GMT+7
+      </p>
+    </header>
+    <main style="text-align: center; min-height: 65vh">
+      <div id="poop-log" style="padding: 5px 15px 30px 15px">
+        <h1 style="text-align: center">💩 {{ .Year }} 💩</h1>
+        <table style="margin: 0 auto; border-collapse: collapse">
+          <tr>
+            <th style="border: 1px solid black; font-weight: bold">Month</th>
+            <th style="border: 1px solid black; font-weight: bold">💩 Count</th>
+          </tr>
+          {{ $total := 0 }} {{ with .Data }} {{ range . }}
+          <tr style="text-align: center">
+            <td style="border: 1px solid black">
+              <a href="/{{$.Year}}/{{.Period}}">{{getMonthName .Period}}</a>
+            </td>
+            <td style="border: 1px solid black">
+              {{ if gt .Count 0 }}{{ .Count }}{{else}} - {{end}}
+            </td>
+            {{ $total = add $total .Count }}
+          </tr>
+          {{ end }} {{ end }}
+          <tr style="text-align: center">
+            <td style="border: 1px solid black; font-weight: bold">Total</td>
+            <td style="border: 1px solid black; font-weight: bold">
+              {{ $total }}
+            </td>
+          </tr>
+        </table>
+      </div>
+      <a id="download-button">
+        <button style="margin-top: 20px">Save as Image</button>
+      </a>
+    </main>
+    <footer>
+      <p style="text-align: center; font-weight: bold">
+        Last 💩 on {{ .LastDataAt.Format "02 January 2006 at 15:04" }} GMT+7
+      </p>
+    </footer>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"
+      integrity="sha512-01CJ9/g7e8cUmY0DFTMcUw/ikS799FHiOA0eyHsUWfOetgbx/t6oV4otQ5zXKQyIrQGTHSmRVPIgrgLcZi/WMA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        const currentTimeElem = document.querySelector("#currentTime");
+        setInterval(() => {
+          let currentTime = new Date();
+          const dateOptions = {
+            timeZone: "Asia/Jakarta",
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          };
+          const timeOptions = {
+            timeZone: "Asia/Jakarta",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
+          };
+
+          const formattedDate = currentTime.toLocaleDateString(
+            "en-GB",
+            dateOptions
+          );
+          const formattedTime = currentTime.toLocaleTimeString(
+            "en-GB",
+            timeOptions
+          );
+
+          currentTimeElem.textContent = `${formattedDate} ${formattedTime}`;
+        }, 1000);
+        const node = document.querySelector("#poop-log");
+        domtoimage
+          .toPng(node, {
+            bgcolor: "white",
+          })
+          .then(function (dataUrl) {
+            const downloadButton = document.querySelector("#download-button");
+            downloadButton.download = "poop-log-{{.Year}}.png";
+            downloadButton.href = dataUrl;
+          });
+      });
+    </script>
+  </body>
 </html>
 {{ end }}
