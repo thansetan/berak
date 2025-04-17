@@ -10,6 +10,7 @@ import (
 
 type repository interface {
 	Add(context.Context) error
+	AddWithDate(context.Context, time.Time) error
 	DeleteLast(context.Context) error
 	GetMonthlyByYear(context.Context, uint64, string) ([]AggData, error)
 	GetDailyByMonthAndYear(context.Context, uint64, uint64, string) ([]AggData, error)
@@ -27,6 +28,14 @@ func NewRepo(db *sql.DB) *repo {
 func (r *repo) Add(ctx context.Context) error {
 	_, err := r.db.ExecContext(ctx, `
 	INSERT INTO berak DEFAULT VALUES`)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *repo) AddWithDate(ctx context.Context, t time.Time) error {
+	_, err := r.db.ExecContext(ctx, "INSERT INTO berak(timestamp) VALUES(?)", t)
 	if err != nil {
 		return err
 	}

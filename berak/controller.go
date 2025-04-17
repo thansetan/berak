@@ -2,7 +2,9 @@ package berak
 
 import (
 	"encoding/json"
+	"errors"
 	"html/template"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -35,7 +37,25 @@ func NewController(repo repository, tmpl *template.Template, logger *slog.Logger
 }
 
 func (c *controller) Create(w http.ResponseWriter, r *http.Request) {
-	err := c.repo.Add(r.Context())
+	var data struct {
+		Timestamp time.Time `json:"timestamp"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil && !errors.Is(err, io.EOF) {
+		c.logger.ErrorContext(r.Context(), "error adding new 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		return
+	}
+	defer r.Body.Close()
+	if errors.Is(err, io.EOF) {
+		err = c.repo.Add(r.Context())
+	} else {
+		if data.Timestamp.IsZero() {
+			WriteResponseJSON(w, http.StatusBadRequest, "timestamp can't be empty!")
+		}
+		err = c.repo.AddWithDate(r.Context(), data.Timestamp.UTC())
+
+	}
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error adding new 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
