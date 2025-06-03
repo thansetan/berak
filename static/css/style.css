@@ -1,0 +1,14 @@
+table {
+  width: 50%;
+}
+
+@media (max-width: 768px) {
+  table {
+    width: 100%;
+  }
+}
+
+.highlighted {
+  background-color: yellow;
+  transition: background-color 0.5s ease-in-out;
+}

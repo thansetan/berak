@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -37,7 +38,7 @@ func main() {
 		panic(err)
 	}
 	repo := berak.NewRepo(db)
-	tmpl := template.Must(template.New("").Funcs(template.FuncMap{
+	tmpl := template.New("").Funcs(template.FuncMap{
 		"add": func(a, b int) int {
 			return a + b
 		},
@@ -66,7 +67,17 @@ func main() {
 			}
 			return strings.Repeat("💩", n)
 		},
-	}).ParseFS(templatesFS, "*/*.html"))
+	})
+
+	err = filepath.WalkDir("templates", func(path string, d fs.DirEntry, err error) error {
+		if !d.IsDir() && filepath.Ext(path) == ".html" {
+			_, err = tmpl.ParseFiles(path)
+		}
+		return err
+	})
+	if err != nil {
+		panic(err)
+	}
 	controller := berak.NewController(repo, tmpl, logger)
 
 	r := mux.NewRouter()

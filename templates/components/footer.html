@@ -1,0 +1,25 @@
+{{ define "footer" }}
+<footer>
+  <p style="text-align: center; font-weight: bold">
+    Last 💩 on
+    <a href="/{{ .Year }}/{{ printf `%d` .Month }}#{{ .Day }}"
+      >{{ .Format "02 January 2006 at 15:04" }} GMT+7
+    </a>
+  </p>
+</footer>
+<script>
+  const highlight = () => {
+    const highlightedRows = document.querySelectorAll("tr.highlighted");
+    highlightedRows.forEach((e) => e.classList.remove("highlighted"));
+    const hash = location.hash.substring(1);
+    if (hash) {
+      const row = document.getElementById(hash);
+      if (row) {
+        row.classList.add("highlighted");
+      }
+    }
+  };
+  highlight();
+  window.addEventListener("hashchange", highlight);
+</script>
+{{ end }}
