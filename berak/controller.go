@@ -106,7 +106,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	longestDayWithoutPoop, err := c.repo.GetLongestDayWithoutPoop(r.Context())
+	longestDayWithoutPoop, err := c.repo.GetLongestDayWithoutPoop(r.Context(), os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting longest day without 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
@@ -206,7 +206,7 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
 		return
 	}
-	longestDayWithoutPoop, err := c.repo.GetLongestDayWithoutPoop(r.Context())
+	longestDayWithoutPoop, err := c.repo.GetLongestDayWithoutPoop(r.Context(), os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting longest day without 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")

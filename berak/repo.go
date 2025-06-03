@@ -17,7 +17,7 @@ type repository interface {
 	GetMonthlyByYear(context.Context, uint64, string) ([]model.AggData, error)
 	GetDailyByMonthAndYear(context.Context, uint64, uint64, string) ([]model.AggData, error)
 	GetLastDataTimestamp(context.Context, string) (time.Time, error)
-	GetLongestDayWithoutPoop(context.Context) (model.LongestDayWithoutPoop, error)
+	GetLongestDayWithoutPoop(context.Context, string) (model.LongestDayWithoutPoop, error)
 	GetMostPoopInADay(context.Context, string) (model.MostPoopInADay, error)
 }
 
@@ -142,18 +142,29 @@ func (r *repo) GetLastDataTimestamp(ctx context.Context, offset string) (time.Ti
 	return lastInsertAt, nil
 }
 
-func (r *repo) GetLongestDayWithoutPoop(ctx context.Context) (model.LongestDayWithoutPoop, error) {
-	var l model.LongestDayWithoutPoop
+func (r *repo) GetLongestDayWithoutPoop(ctx context.Context, offset string) (model.LongestDayWithoutPoop, error) {
+	var startTime, endTime string
 	err := r.db.QueryRowContext(ctx, `
-		SELECT b0.timestamp curr_poop,
-       		b1.timestamp prev_poop
+		SELECT DATETIME(b0.timestamp, ?) curr_poop,
+       		DATETIME(b1.timestamp, ?) prev_poop
 		FROM berak b0
          	LEFT JOIN berak b1 ON b0.id - 1 = b1.id
 		ORDER BY JULIANDAY(b0.timestamp) - JULIANDAY(b1.timestamp) DESC
 		LIMIT 1
-		`).Scan(&l.EndTime, &l.StartTime)
+		`, offset, offset).Scan(&endTime, &startTime)
 	if err != nil {
 		return model.LongestDayWithoutPoop{}, err
+	}
+
+	var l model.LongestDayWithoutPoop
+
+	l.StartTime, err = time.Parse("2006-01-02 15:04:05", startTime)
+	if err != nil {
+		return model.LongestDayWithoutPoop{}, fmt.Errorf("failed to parse startTime: %e", err)
+	}
+	l.EndTime, err = time.Parse("2006-01-02 15:04:05", endTime)
+	if err != nil {
+		return model.LongestDayWithoutPoop{}, fmt.Errorf("failed to parse endTime: %e", err)
 	}
 
 	return l, nil
