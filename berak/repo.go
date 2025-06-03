@@ -6,15 +6,19 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/thansetan/berak/model"
 )
 
 type repository interface {
 	Add(context.Context) error
 	AddWithDate(context.Context, time.Time) error
 	DeleteLast(context.Context) error
-	GetMonthlyByYear(context.Context, uint64, string) ([]AggData, error)
-	GetDailyByMonthAndYear(context.Context, uint64, uint64, string) ([]AggData, error)
+	GetMonthlyByYear(context.Context, uint64, string) ([]model.AggData, error)
+	GetDailyByMonthAndYear(context.Context, uint64, uint64, string) ([]model.AggData, error)
 	GetLastDataTimestamp(context.Context, string) (time.Time, error)
+	GetLongestDayWithoutPoop(context.Context) (model.LongestDayWithoutPoop, error)
+	GetMostPoopInADay(context.Context, string) (model.MostPoopInADay, error)
 }
 
 type repo struct {
@@ -54,12 +58,7 @@ func (r *repo) DeleteLast(ctx context.Context) error {
 	return nil
 }
 
-type AggData struct {
-	Period int
-	Count  int
-}
-
-func (r *repo) GetMonthlyByYear(ctx context.Context, year uint64, offset string) ([]AggData, error) {
+func (r *repo) GetMonthlyByYear(ctx context.Context, year uint64, offset string) ([]model.AggData, error) {
 	rows, err := r.db.QueryContext(ctx, `
 	WITH timestamp_with_offset AS (
 		SELECT
@@ -78,9 +77,9 @@ func (r *repo) GetMonthlyByYear(ctx context.Context, year uint64, offset string)
 		return nil, err
 	}
 
-	var data []AggData
+	var data []model.AggData
 	for rows.Next() {
-		var monthlyData AggData
+		var monthlyData model.AggData
 		err = rows.Scan(&monthlyData.Period, &monthlyData.Count)
 		if err != nil {
 			return nil, err
@@ -91,7 +90,7 @@ func (r *repo) GetMonthlyByYear(ctx context.Context, year uint64, offset string)
 	return data, nil
 }
 
-func (r *repo) GetDailyByMonthAndYear(ctx context.Context, year, month uint64, offset string) ([]AggData, error) {
+func (r *repo) GetDailyByMonthAndYear(ctx context.Context, year, month uint64, offset string) ([]model.AggData, error) {
 	rows, err := r.db.QueryContext(ctx, `
 	WITH timestamp_with_offset AS (
 		SELECT
@@ -110,9 +109,9 @@ func (r *repo) GetDailyByMonthAndYear(ctx context.Context, year, month uint64, o
 		return nil, err
 	}
 
-	var data []AggData
+	var data []model.AggData
 	for rows.Next() {
-		var dailyData AggData
+		var dailyData model.AggData
 		err = rows.Scan(&dailyData.Period, &dailyData.Count)
 		if err != nil {
 			return nil, err
@@ -141,4 +140,40 @@ func (r *repo) GetLastDataTimestamp(ctx context.Context, offset string) (time.Ti
 		return time.Time{}, nil
 	}
 	return lastInsertAt, nil
+}
+
+func (r *repo) GetLongestDayWithoutPoop(ctx context.Context) (model.LongestDayWithoutPoop, error) {
+	var l model.LongestDayWithoutPoop
+	err := r.db.QueryRowContext(ctx, `
+		SELECT b0.timestamp curr_poop,
+       		b1.timestamp prev_poop
+		FROM berak b0
+         	LEFT JOIN berak b1 ON b0.id - 1 = b1.id
+		ORDER BY JULIANDAY(b0.timestamp) - JULIANDAY(b1.timestamp) DESC
+		LIMIT 1
+		`).Scan(&l.EndTime, &l.StartTime)
+	if err != nil {
+		return model.LongestDayWithoutPoop{}, err
+	}
+
+	return l, nil
+}
+
+func (r *repo) GetMostPoopInADay(ctx context.Context, offset string) (model.MostPoopInADay, error) {
+	var m model.MostPoopInADay
+	err := r.db.QueryRowContext(ctx, `
+		WITH timestamp_with_offset AS (SELECT id,
+		                                      DATETIME(timestamp, ?) timestamp
+		                               FROM berak)
+		SELECT STRFTIME('%m', timestamp) bulan,
+		       STRFTIME('%d', timestamp) tanggal,
+		       COUNT(id)                 jumlah
+		FROM timestamp_with_offset
+		GROUP BY bulan, tanggal
+		ORDER BY jumlah DESC
+		LIMIT 1`, offset).Scan(&m.Month, &m.Day, &m.Count)
+	if err != nil {
+		return model.MostPoopInADay{}, err
+	}
+	return m, nil
 }

@@ -22,9 +22,6 @@ import (
 	"github.com/thansetan/berak/db"
 )
 
-//go:embed templates/*
-var templatesFS embed.FS
-
 //go:embed static/*
 var staticDirFS embed.FS
 

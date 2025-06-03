@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/thansetan/berak/model"
 )
 
 type response struct {
@@ -98,22 +99,36 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	mostPoopInADay, err := c.repo.GetMostPoopInADay(r.Context(), os.Getenv("TIME_OFFSET"))
+	if err != nil {
+		c.logger.ErrorContext(r.Context(), "error getting most 💩 in a day", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		return
+	}
+
+	longestDayWithoutPoop, err := c.repo.GetLongestDayWithoutPoop(r.Context())
+	if err != nil {
+		c.logger.ErrorContext(r.Context(), "error getting longest day without 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		return
+	}
+
 	maxMonth := now.Month()
 	if year < uint64(now.Year()) {
 		maxMonth = 12
 	}
-	completeMonthlyData := make([]AggData, 0, maxMonth)
+	completeMonthlyData := make([]model.AggData, 0, maxMonth)
 
 	curr := 1
 	for _, d := range monthlyData {
 		for ; curr < d.Period; curr++ {
-			completeMonthlyData = append(completeMonthlyData, AggData{Period: curr})
+			completeMonthlyData = append(completeMonthlyData, model.AggData{Period: curr})
 		}
 		completeMonthlyData = append(completeMonthlyData, d)
 		curr++
 	}
 	for ; curr <= int(maxMonth); curr++ {
-		completeMonthlyData = append(completeMonthlyData, AggData{Period: curr})
+		completeMonthlyData = append(completeMonthlyData, model.AggData{Period: curr})
 	}
 	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
 	if err != nil {
@@ -123,15 +138,19 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	err = c.tmpl.ExecuteTemplate(w, "year", struct {
-		LastDataAt  time.Time
-		Data        []AggData
-		Year        int
-		CurrentTime time.Time
+		LastDataAt            time.Time
+		Data                  []model.AggData
+		Year                  int
+		CurrentTime           time.Time
+		LongestDayWithoutPoop model.LongestDayWithoutPoop
+		MostPoopInADay        model.MostPoopInADay
 	}{
-		Year:        int(year),
-		Data:        completeMonthlyData,
-		LastDataAt:  lastDataAt,
-		CurrentTime: now,
+		Year:                  int(year),
+		Data:                  completeMonthlyData,
+		LastDataAt:            lastDataAt,
+		CurrentTime:           now,
+		LongestDayWithoutPoop: longestDayWithoutPoop,
+		MostPoopInADay:        mostPoopInADay,
 	})
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error executing year template", "error", err.Error(), "remote_addr", r.RemoteAddr)
@@ -174,12 +193,26 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	mostPoopInADay, err := c.repo.GetMostPoopInADay(r.Context(), os.Getenv("TIME_OFFSET"))
+	if err != nil {
+		c.logger.ErrorContext(r.Context(), "error getting most 💩 in a day", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		return
+	}
+
 	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting last 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
 		return
 	}
+	longestDayWithoutPoop, err := c.repo.GetLongestDayWithoutPoop(r.Context())
+	if err != nil {
+		c.logger.ErrorContext(r.Context(), "error getting longest day without 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		return
+	}
+
 	maxDays := now.Day()
 	if year < uint64(now.Year()) || (year == uint64(now.Year()) && month < uint64(now.Month())) {
 		maxDays = monthDays[int(month)]
@@ -187,33 +220,37 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 			maxDays++
 		}
 	}
-	dailyDataComplete := make([]AggData, 0, maxDays)
+	dailyDataComplete := make([]model.AggData, 0, maxDays)
 
 	curr := 1
 	for _, d := range dailyData {
 		for ; curr < d.Period; curr++ {
-			dailyDataComplete = append(dailyDataComplete, AggData{Period: curr})
+			dailyDataComplete = append(dailyDataComplete, model.AggData{Period: curr})
 		}
 		dailyDataComplete = append(dailyDataComplete, d)
 		curr++
 	}
 	for ; curr <= maxDays; curr++ {
-		dailyDataComplete = append(dailyDataComplete, AggData{Period: curr})
+		dailyDataComplete = append(dailyDataComplete, model.AggData{Period: curr})
 	}
 
 	w.WriteHeader(http.StatusOK)
 	err = c.tmpl.ExecuteTemplate(w, "month", struct {
-		LastDataAt  time.Time
-		Data        []AggData
-		Year        int
-		Month       int
-		CurrentTime time.Time
+		LastDataAt            time.Time
+		Data                  []model.AggData
+		Year                  int
+		Month                 int
+		CurrentTime           time.Time
+		LongestDayWithoutPoop model.LongestDayWithoutPoop
+		MostPoopInADay        model.MostPoopInADay
 	}{
-		Year:        int(year),
-		Month:       int(month),
-		Data:        dailyDataComplete,
-		LastDataAt:  lastDataAt,
-		CurrentTime: now,
+		Year:                  int(year),
+		Month:                 int(month),
+		Data:                  dailyDataComplete,
+		LastDataAt:            lastDataAt,
+		CurrentTime:           now,
+		LongestDayWithoutPoop: longestDayWithoutPoop,
+		MostPoopInADay:        mostPoopInADay,
 	})
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error executing month template", "error", err.Error(), "remote_addr", r.RemoteAddr)
