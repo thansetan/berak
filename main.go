@@ -22,6 +22,9 @@ import (
 	"github.com/thansetan/berak/db"
 )
 
+//go:embed templates/*
+var templateDirFS embed.FS
+
 //go:embed static/*
 var staticDirFS embed.FS
 
@@ -66,7 +69,7 @@ func main() {
 		},
 	})
 
-	err = filepath.WalkDir("templates", func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(templateDirFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if !d.IsDir() && filepath.Ext(path) == ".html" {
 			_, err = tmpl.ParseFiles(path)
 		}
