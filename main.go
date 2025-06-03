@@ -71,7 +71,7 @@ func main() {
 
 	err = fs.WalkDir(templateDirFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if !d.IsDir() && filepath.Ext(path) == ".html" {
-			_, err = tmpl.ParseFiles(path)
+			_, err = tmpl.ParseFS(templateDirFS, path)
 		}
 		return err
 	})
