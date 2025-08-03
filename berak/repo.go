@@ -149,7 +149,7 @@ func (r *repo) GetLongestDayWithoutPoop(ctx context.Context, offset string) (mod
        		DATETIME(b1.timestamp, ?) prev_poop
 		FROM berak b0
          	LEFT JOIN berak b1 ON b0.id - 1 = b1.id
-		ORDER BY JULIANDAY(b0.timestamp) - JULIANDAY(b1.timestamp) DESC
+		ORDER BY JULIANDAY(b0.timestamp) - JULIANDAY(b1.timestamp) DESC, b0.timestamp DESC
 		LIMIT 1
 		`, offset, offset).Scan(&endTime, &startTime)
 	if err != nil {
@@ -181,7 +181,7 @@ func (r *repo) GetMostPoopInADay(ctx context.Context, offset string) (model.Most
 		       COUNT(id)                 jumlah
 		FROM timestamp_with_offset
 		GROUP BY bulan, tanggal
-		ORDER BY jumlah DESC
+		ORDER BY jumlah DESC, bulan DESC, tanggal DESC
 		LIMIT 1`, offset).Scan(&m.Month, &m.Day, &m.Count)
 	if err != nil {
 		return model.MostPoopInADay{}, err
