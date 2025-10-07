@@ -1,6 +1,7 @@
 package berak
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -19,8 +20,13 @@ type response struct {
 	Message string `json:"message"`
 }
 
+const (
+	contentTypeHeader = "Content-Type"
+	ourFaultMessage   = "it's our fault, not yours!"
+)
+
 func WriteResponseJSON(w http.ResponseWriter, statusCode int, message string) {
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add(contentTypeHeader, "application/json")
 	w.WriteHeader(statusCode)
 	_ = json.NewEncoder(w).Encode(response{
 		Message: message,
@@ -44,7 +50,7 @@ func (c *controller) Create(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil && !errors.Is(err, io.EOF) {
 		c.logger.ErrorContext(r.Context(), "error adding new 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 	defer r.Body.Close()
@@ -53,13 +59,17 @@ func (c *controller) Create(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if data.Timestamp.IsZero() {
 			WriteResponseJSON(w, http.StatusBadRequest, "timestamp can't be empty!")
+			return
+		}
+		if data.Timestamp.After(time.Now()) {
+			WriteResponseJSON(w, http.StatusBadRequest, "💩 time can't be after current time!")
+			return
 		}
 		err = c.repo.AddWithDate(r.Context(), data.Timestamp.UTC())
-
 	}
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error adding new 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 	c.logger.InfoContext(r.Context(), "new 💩 added!", "remote_addr", r.RemoteAddr)
@@ -70,7 +80,7 @@ func (c *controller) Delete(w http.ResponseWriter, r *http.Request) {
 	err := c.repo.DeleteLast(r.Context())
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error removing last 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 	c.logger.InfoContext(r.Context(), "last 💩 removed!", "remote_addr", r.RemoteAddr)
@@ -95,21 +105,21 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 	monthlyData, err := c.repo.GetMonthlyByYear(r.Context(), year, os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting monthly 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 
 	mostPoopInADay, err := c.repo.GetMostPoopInADay(r.Context(), os.Getenv("TIME_OFFSET"))
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		c.logger.ErrorContext(r.Context(), "error getting most 💩 in a day", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 
 	longestDayWithoutPoop, err := c.repo.GetLongestDayWithoutPoop(r.Context(), os.Getenv("TIME_OFFSET"))
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		c.logger.ErrorContext(r.Context(), "error getting longest day without 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 
@@ -131,9 +141,9 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		completeMonthlyData = append(completeMonthlyData, model.AggData{Period: curr})
 	}
 	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		c.logger.ErrorContext(r.Context(), "error getting last 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -189,27 +199,27 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 	dailyData, err := c.repo.GetDailyByMonthAndYear(r.Context(), year, month, os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting daily 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 
 	mostPoopInADay, err := c.repo.GetMostPoopInADay(r.Context(), os.Getenv("TIME_OFFSET"))
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		c.logger.ErrorContext(r.Context(), "error getting most 💩 in a day", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 
 	lastDataAt, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		c.logger.ErrorContext(r.Context(), "error getting last 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 	longestDayWithoutPoop, err := c.repo.GetLongestDayWithoutPoop(r.Context(), os.Getenv("TIME_OFFSET"))
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		c.logger.ErrorContext(r.Context(), "error getting longest day without 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 
@@ -269,10 +279,10 @@ func (c *controller) GetLastPoopTime(w http.ResponseWriter, r *http.Request) {
 	lastPoopTime, err := c.repo.GetLastDataTimestamp(r.Context(), os.Getenv("TIME_OFFSET"))
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "error getting last poop time", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add(contentTypeHeader, "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(struct {
 		LastPoopTime time.Time `json:"last_poop_time"`
@@ -286,10 +296,10 @@ func (c *controller) GetSQLiteFile(w http.ResponseWriter, r *http.Request) {
 	_, err := os.Stat(filePath)
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "file doesn't exist", "error", err)
-		WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+		WriteResponseJSON(w, http.StatusInternalServerError, ourFaultMessage)
 		return
 	}
 	w.Header().Set("Content-Disposition", "attachment; filename=berak.sqlite3")
-	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set(contentTypeHeader, "application/octet-stream")
 	http.ServeFile(w, r, filePath)
 }

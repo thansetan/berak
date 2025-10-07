@@ -15,6 +15,10 @@ type LongestDayWithoutPoop struct {
 	EndTime   time.Time
 }
 
+func (l LongestDayWithoutPoop) IsEmpty() bool {
+	return (l.StartTime.IsZero() || l.EndTime.IsZero()) || (l.EndTime.Sub(l.StartTime) < time.Hour)
+}
+
 func (l LongestDayWithoutPoop) String() string {
 	timeDiff := l.EndTime.Sub(l.StartTime)
 	dayDiff := int(timeDiff.Hours()) / 24
@@ -31,7 +35,12 @@ func (l LongestDayWithoutPoop) String() string {
 }
 
 type MostPoopInADay struct {
+	Year  int
 	Month int
 	Day   int
 	Count int
+}
+
+func (m MostPoopInADay) IsEmpty() bool {
+	return m.Count <= 1
 }

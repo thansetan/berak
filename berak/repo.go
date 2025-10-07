@@ -143,14 +143,13 @@ func (r *repo) GetLastDataTimestamp(ctx context.Context, offset string) (time.Ti
 }
 
 func (r *repo) GetLongestDayWithoutPoop(ctx context.Context, offset string) (model.LongestDayWithoutPoop, error) {
-	var startTime, endTime string
+	var startTime, endTime sql.NullString
 	err := r.db.QueryRowContext(ctx, `
-		SELECT DATETIME(b0.timestamp, ?) curr_poop,
-       		DATETIME(b1.timestamp, ?) prev_poop
-		FROM berak b0
-         	LEFT JOIN berak b1 ON b0.id - 1 = b1.id
-		ORDER BY JULIANDAY(b0.timestamp) - JULIANDAY(b1.timestamp) DESC, b0.timestamp DESC
-		LIMIT 1
+		SELECT
+    		DATETIME(timestamp, '7 hours') timestamp,
+    		LAG(DATETIME(timestamp, '7 hours')) OVER (ORDER BY timestamp) prev_timestamp
+		FROM berak
+		ORDER BY JULIANDAY(timestamp) - JULIANDAY(prev_timestamp) DESC LIMIT 1
 		`, offset, offset).Scan(&endTime, &startTime)
 	if err != nil {
 		return model.LongestDayWithoutPoop{}, err
@@ -158,13 +157,17 @@ func (r *repo) GetLongestDayWithoutPoop(ctx context.Context, offset string) (mod
 
 	var l model.LongestDayWithoutPoop
 
-	l.StartTime, err = time.Parse("2006-01-02 15:04:05", startTime)
-	if err != nil {
-		return model.LongestDayWithoutPoop{}, fmt.Errorf("failed to parse startTime: %e", err)
+	if startTime.Valid {
+		l.StartTime, err = time.Parse("2006-01-02 15:04:05", startTime.String)
+		if err != nil {
+			return model.LongestDayWithoutPoop{}, fmt.Errorf("failed to parse startTime: %s", err)
+		}
 	}
-	l.EndTime, err = time.Parse("2006-01-02 15:04:05", endTime)
-	if err != nil {
-		return model.LongestDayWithoutPoop{}, fmt.Errorf("failed to parse endTime: %e", err)
+	if endTime.Valid {
+		l.EndTime, err = time.Parse("2006-01-02 15:04:05", endTime.String)
+		if err != nil {
+			return model.LongestDayWithoutPoop{}, fmt.Errorf("failed to parse endTime: %s", err)
+		}
 	}
 
 	return l, nil
@@ -176,13 +179,15 @@ func (r *repo) GetMostPoopInADay(ctx context.Context, offset string) (model.Most
 		WITH timestamp_with_offset AS (SELECT id,
 		                                      DATETIME(timestamp, ?) timestamp
 		                               FROM berak)
-		SELECT STRFTIME('%m', timestamp) bulan,
-		       STRFTIME('%d', timestamp) tanggal,
-		       COUNT(id)                 jumlah
+		SELECT 
+				STRFTIME('%Y', timestamp) tahun,
+			   	STRFTIME('%m', timestamp) bulan,
+		       	STRFTIME('%d', timestamp) tanggal,
+		       	COUNT(id)                 jumlah
 		FROM timestamp_with_offset
-		GROUP BY bulan, tanggal
-		ORDER BY jumlah DESC, bulan DESC, tanggal DESC
-		LIMIT 1`, offset).Scan(&m.Month, &m.Day, &m.Count)
+		GROUP BY tahun, bulan, tanggal
+		ORDER BY jumlah DESC, tahun DESC, bulan DESC, tanggal DESC
+		LIMIT 1`, offset).Scan(&m.Year, &m.Month, &m.Day, &m.Count)
 	if err != nil {
 		return model.MostPoopInADay{}, err
 	}
