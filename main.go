@@ -89,7 +89,7 @@ func main() {
 		now := time.Now()
 		http.Redirect(w, r, fmt.Sprintf("/%d", now.Year()), http.StatusTemporaryRedirect)
 	})
-	r.Path("/berak").HandlerFunc((protected(http.HandlerFunc(controller.Create)))).Methods(http.MethodPost)
+	r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Create)))).Methods(http.MethodPost)
 	r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Delete)))).Methods(http.MethodDelete)
 	r.Path("/{year:[0-9]+}").HandlerFunc(controller.GetMonthly).Methods(http.MethodGet)
 	r.Path("/{year:[0-9]+}/{month:[0-9]+}").HandlerFunc(controller.GetDaily).Methods(http.MethodGet)
