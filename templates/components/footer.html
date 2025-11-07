@@ -1,12 +1,12 @@
 {{ define "footer" }}
-<footer>
-  {{ if not .LastDataAt.IsZero }}
+<footer id="poop-footer">
+  {{ if not .LastPoopAt.IsZero }}
   <p style="text-align: center; font-weight: bold; margin: 0">
     Last 💩 dropped on
     <a
-      href="/{{ .LastDataAt.Year }}/{{ printf `%d` .LastDataAt.Month }}#{{ .LastDataAt.Day }}"
+      href="/{{ .LastPoopAt.Year }}/{{ printf `%d` .LastPoopAt.Month }}#{{ .LastPoopAt.Day }}"
     >
-      {{ .LastDataAt.Format "02 January 2006 at 15:04" }} GMT+7
+      {{ .LastPoopAt.Format "02 January 2006 at 15:04" }} GMT+7
     </a>
   </p>
   {{ end }}
@@ -25,9 +25,9 @@
     >
     {{ if not .LongestDayWithoutPoop.IsEmpty }}
       <li style="margin: 0">
-        Longest no-💩 streak: {{ .LongestDayWithoutPoop }}!
+        Longest no-💩 streak: 
         <span style="font-size: 0.85em"
-          >(From
+          >{{ .LongestDayWithoutPoop }}! (From
           <a
             href="/{{ .LongestDayWithoutPoop.StartTime.Year }}/{{ printf `%d` .LongestDayWithoutPoop.StartTime.Month }}#{{ .LongestDayWithoutPoop.StartTime.Day }}"
           >
@@ -45,9 +45,9 @@
       {{ end }}
       {{ if not .MostPoopInADay.IsEmpty }}
       <li style="margin: 0">
-        Most 💩s in a single day: {{ .MostPoopInADay.Count }} times
+        Most 💩s in a single day: 
         <span style="font-size: 0.85em"
-          >(On
+          >{{ .MostPoopInADay.Count }} times (On
           <a
             href="/{{ .MostPoopInADay.Year }}/{{ .MostPoopInADay.Month }}#{{ .MostPoopInADay.Day }}"
           >

@@ -10,26 +10,15 @@ import (
 	"github.com/thansetan/berak/model"
 )
 
-type repository interface {
-	Add(context.Context) error
-	AddWithDate(context.Context, time.Time) error
-	DeleteLast(context.Context) error
-	GetMonthlyByYear(context.Context, uint64, string) ([]model.AggData, error)
-	GetDailyByMonthAndYear(context.Context, uint64, uint64, string) ([]model.AggData, error)
-	GetLastDataTimestamp(context.Context, string) (time.Time, error)
-	GetLongestDayWithoutPoop(context.Context, string) (model.LongestDayWithoutPoop, error)
-	GetMostPoopInADay(context.Context, string) (model.MostPoopInADay, error)
-}
-
-type repo struct {
+type berakRepository struct {
 	db *sql.DB
 }
 
-func NewRepo(db *sql.DB) *repo {
-	return &repo{db}
+func NewRepo(db *sql.DB) *berakRepository {
+	return &berakRepository{db}
 }
 
-func (r *repo) Add(ctx context.Context) error {
+func (r *berakRepository) Add(ctx context.Context) error {
 	_, err := r.db.ExecContext(ctx, `
 	INSERT INTO berak DEFAULT VALUES`)
 	if err != nil {
@@ -38,7 +27,7 @@ func (r *repo) Add(ctx context.Context) error {
 	return nil
 }
 
-func (r *repo) AddWithDate(ctx context.Context, t time.Time) error {
+func (r *berakRepository) AddWithDate(ctx context.Context, t time.Time) error {
 	_, err := r.db.ExecContext(ctx, "INSERT INTO berak(timestamp) VALUES(?)", t)
 	if err != nil {
 		return err
@@ -46,7 +35,7 @@ func (r *repo) AddWithDate(ctx context.Context, t time.Time) error {
 	return nil
 }
 
-func (r *repo) DeleteLast(ctx context.Context) error {
+func (r *berakRepository) DeleteLast(ctx context.Context) error {
 	res, err := r.db.ExecContext(ctx, `
 	DELETE FROM berak WHERE id = (SELECT MAX(id) FROM berak)`)
 	if err != nil {
@@ -58,7 +47,7 @@ func (r *repo) DeleteLast(ctx context.Context) error {
 	return nil
 }
 
-func (r *repo) GetMonthlyByYear(ctx context.Context, year uint64, offset string) ([]model.AggData, error) {
+func (r *berakRepository) GetMonthlyByYear(ctx context.Context, year uint64, offset string) ([]model.AggData, error) {
 	rows, err := r.db.QueryContext(ctx, `
 	WITH timestamp_with_offset AS (
 		SELECT
@@ -90,7 +79,7 @@ func (r *repo) GetMonthlyByYear(ctx context.Context, year uint64, offset string)
 	return data, nil
 }
 
-func (r *repo) GetDailyByMonthAndYear(ctx context.Context, year, month uint64, offset string) ([]model.AggData, error) {
+func (r *berakRepository) GetDailyByMonthAndYear(ctx context.Context, year, month uint64, offset string) ([]model.AggData, error) {
 	rows, err := r.db.QueryContext(ctx, `
 	WITH timestamp_with_offset AS (
 		SELECT
@@ -122,7 +111,7 @@ func (r *repo) GetDailyByMonthAndYear(ctx context.Context, year, month uint64, o
 	return data, nil
 }
 
-func (r *repo) GetLastDataTimestamp(ctx context.Context, offset string) (time.Time, error) {
+func (r *berakRepository) GetLastDataTimestamp(ctx context.Context, offset string) (time.Time, error) {
 	var s string
 	err := r.db.QueryRowContext(ctx, `
 	WITH timestamp_with_offset AS (
@@ -142,7 +131,7 @@ func (r *repo) GetLastDataTimestamp(ctx context.Context, offset string) (time.Ti
 	return lastInsertAt, nil
 }
 
-func (r *repo) GetLongestDayWithoutPoop(ctx context.Context, offset string) (model.LongestDayWithoutPoop, error) {
+func (r *berakRepository) GetLongestDayWithoutPoop(ctx context.Context, offset string) (model.LongestDayWithoutPoop, error) {
 	var startTime, endTime sql.NullString
 	err := r.db.QueryRowContext(ctx, `
 		SELECT
@@ -173,7 +162,7 @@ func (r *repo) GetLongestDayWithoutPoop(ctx context.Context, offset string) (mod
 	return l, nil
 }
 
-func (r *repo) GetMostPoopInADay(ctx context.Context, offset string) (model.MostPoopInADay, error) {
+func (r *berakRepository) GetMostPoopInADay(ctx context.Context, offset string) (model.MostPoopInADay, error) {
 	var m model.MostPoopInADay
 	err := r.db.QueryRowContext(ctx, `
 		WITH timestamp_with_offset AS (SELECT id,

@@ -1,0 +1,27 @@
+{{ define "daily_table" }}
+<table style="margin: 0 auto; border-collapse: collapse" id="poop-table">
+  <thead>
+    <tr>
+      <th style="border: 1px solid black; font-weight: bold">Day</th>
+      <th style="border: 1px solid black; font-weight: bold">Count</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ $sum := 0 }} {{ with .Data }} {{ range . }}
+    <tr style="text-align: center" id="{{ .Period }}">
+      <td style="border: 1px solid black">{{ .Period }}</td>
+      <td style="border: 1px solid black">
+        {{ if and (and (eq .Period $.CurrentTime.Day ) (eq .Count 0)) (eq $.Year
+        $.CurrentTime.Year)}} 0 {{ else }} {{ tai .Count }} {{ end }}
+      </td>
+    </tr>
+    {{ $sum = add $sum .Count }} {{ end }} {{ end }}
+  </tbody>
+  <tfoot>
+    <tr style="text-align: center">
+      <td style="border: 1px solid black; font-weight: bold">Total</td>
+      <td style="border: 1px solid black; font-weight: bold">{{ $sum }}</td>
+    </tr>
+  </tfoot>
+</table>
+{{ end }}

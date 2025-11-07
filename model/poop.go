@@ -5,6 +5,25 @@ import (
 	"time"
 )
 
+type Data struct {
+	Year  int
+	Month int
+	TableData
+	Statistics
+}
+
+type TableData struct {
+	Year        int
+	CurrentTime time.Time
+	Data        []AggData
+}
+
+type Statistics struct {
+	LastPoopAt            time.Time
+	LongestDayWithoutPoop LongestDayWithoutPoop
+	MostPoopInADay        MostPoopInADay
+}
+
 type AggData struct {
 	Period int
 	Count  int
@@ -39,6 +58,10 @@ type MostPoopInADay struct {
 	Month int
 	Day   int
 	Count int
+}
+
+func (m MostPoopInADay) Path() string {
+	return fmt.Sprintf("/%d/%d#%d", m.Year, m.Month, m.Day)
 }
 
 func (m MostPoopInADay) IsEmpty() bool {

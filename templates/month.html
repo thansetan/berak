@@ -94,41 +94,14 @@
           <a style="text-decoration: none" href="/{{.Year}}"> {{ .Year }} </a>
           💩
         </h1>
-        <table style="margin: 0 auto; border-collapse: collapse">
-          <thead>
-            <tr>
-              <th style="border: 1px solid black; font-weight: bold">Day</th>
-              <th style="border: 1px solid black; font-weight: bold">Count</th>
-            </tr>
-          </thead>
-          <tbody>
-            {{ $sum := 0 }} {{ with .Data }} {{ range . }}
-            <tr style="text-align: center" id="{{ .Period }}">
-              <td style="border: 1px solid black">{{ .Period }}</td>
-              <td style="border: 1px solid black">
-                {{ if and (and (eq .Period $.CurrentTime.Day ) (eq .Count 0))
-                (eq $.Year $.CurrentTime.Year)}} 0 {{ else }} {{ tai .Count }}
-                {{ end }}
-              </td>
-            </tr>
-            {{ $sum = add $sum .Count }} {{ end }} {{ end }}
-          </tbody>
-          <tfoot>
-            <tr style="text-align: center">
-              <td style="border: 1px solid black; font-weight: bold">Total</td>
-              <td style="border: 1px solid black; font-weight: bold">
-                {{ $sum }}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+        {{ template "daily_table" .TableData }}
       </div>
       <a id="download-button">
         <button style="margin-top: 20px">Save as Image</button>
       </a>
     </main>
 
-    {{ template "footer" . }}
+    {{ template "footer" .Statistics }}
 
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"
@@ -137,6 +110,18 @@
       referrerpolicy="no-referrer"
     ></script>
     <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const eventSource = new EventSource(
+          "/sse?period=daily&year={{.Year}}&month={{.Month}}"
+        );
+        eventSource.addEventListener("poopupdate", (event) => {
+          const data = JSON.parse(event.data);
+          for (const [k, v] of Object.entries(data)) {
+            const elem = document.getElementById(k);
+            elem.outerHTML = v;
+          }
+        });
+      });
       document.addEventListener("DOMContentLoaded", () => {
         const prevHiglightedRows = document.querySelectorAll("tr.highlighted");
         prevHiglightedRows.forEach((e) => e.classList.remove("highlighted"));

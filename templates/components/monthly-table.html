@@ -1,0 +1,29 @@
+{{ define "monthly_table" }}
+<table style="margin: 0 auto; border-collapse: collapse" id="poop-table">
+  <thead>
+    <tr>
+      <th style="border: 1px solid black; font-weight: bold">Month</th>
+      <th style="border: 1px solid black; font-weight: bold">💩 Count</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ $total := 0 }} {{ with .Data }} {{ range . }}
+    <tr style="text-align: center">
+      <td style="border: 1px solid black">
+        <a href="/{{$.Year}}/{{.Period}}">{{getMonthName .Period}}</a>
+      </td>
+      <td style="border: 1px solid black">
+        {{ if gt .Count 0 }}{{ .Count }}{{else}} - {{end}}
+      </td>
+      {{ $total = add $total .Count }}
+    </tr>
+    {{ end }} {{ end }}
+  </tbody>
+  <tfoot>
+    <tr style="text-align: center">
+      <td style="border: 1px solid black; font-weight: bold">Total</td>
+      <td style="border: 1px solid black; font-weight: bold">{{ $total }}</td>
+    </tr>
+  </tfoot>
+</table>
+{{ end }}

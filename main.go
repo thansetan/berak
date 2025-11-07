@@ -20,6 +20,7 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/thansetan/berak/berak"
 	"github.com/thansetan/berak/db"
+	"github.com/thansetan/berak/helper"
 )
 
 //go:embed templates/*
@@ -37,7 +38,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	repo := berak.NewRepo(db)
+	svc := berak.NewService(repo, os.Getenv("TIME_OFFSET"))
 	tmpl := template.New("").Funcs(template.FuncMap{
 		"add": func(a, b int) int {
 			return a + b
@@ -78,7 +81,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	controller := berak.NewController(repo, tmpl, logger)
+	controller := berak.NewController(svc, tmpl, logger)
 
 	r := mux.NewRouter()
 
@@ -89,6 +92,8 @@ func main() {
 		now := time.Now()
 		http.Redirect(w, r, fmt.Sprintf("/%d", now.Year()), http.StatusTemporaryRedirect)
 	})
+
+	r.Path("/sse").HandlerFunc(controller.Event).Methods(http.MethodGet)
 	r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Create)))).Methods(http.MethodPost)
 	r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Delete)))).Methods(http.MethodDelete)
 	r.Path("/{year:[0-9]+}").HandlerFunc(controller.GetMonthly).Methods(http.MethodGet)
@@ -138,7 +143,7 @@ func protected(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Api-Key") != os.Getenv("BERAK_KEY") {
 			logger.WarnContext(r.Context(), "incorrect API-Key", "remote_addr", r.RemoteAddr, "api-key", r.Header.Get("X-Api-Key"))
-			berak.WriteResponseJSON(w, http.StatusUnauthorized, "gaboleh 😡")
+			helper.WriteResponseJSON(w, http.StatusUnauthorized, "gaboleh 😡")
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -152,7 +157,7 @@ func rateLimit(next http.Handler) http.HandlerFunc {
 		apiKey := r.Header.Get("X-API-KEY")
 		if apiKey == "" {
 			logger.WarnContext(r.Context(), "empty API-Key", "remote_addr", r.RemoteAddr)
-			berak.WriteResponseJSON(w, http.StatusUnauthorized, "gaboleh 😡")
+			helper.WriteMessage(w, http.StatusUnauthorized, "gaboleh 😡")
 			return
 		}
 		lastAccess, ok := users.LoadOrStore(apiKey, time.Now())
@@ -160,12 +165,12 @@ func rateLimit(next http.Handler) http.HandlerFunc {
 			lastAccessedAt, ok := lastAccess.(time.Time)
 			if !ok {
 				logger.ErrorContext(r.Context(), "failed to assert interface to time.Time", "remote_addr", r.RemoteAddr)
-				berak.WriteResponseJSON(w, http.StatusInternalServerError, "it's our fault, not yours!")
+				helper.OurFault(w)
 				return
 			}
 			if time.Since(lastAccessedAt) < time.Minute {
 				logger.WarnContext(r.Context(), "rate limited", "api-key", apiKey, "remote_addr", r.RemoteAddr)
-				berak.WriteResponseJSON(w, http.StatusTooManyRequests, "kecepeten 😡")
+				helper.WriteMessage(w, http.StatusTooManyRequests, "kecepeten 😡")
 				return
 			}
 			users.Store(apiKey, time.Now())
@@ -179,6 +184,12 @@ type wrappedResponseWriter struct {
 	code int
 }
 
+func (wrw *wrappedResponseWriter) Flush() {
+	if flusher, ok := wrw.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
 func (wrw *wrappedResponseWriter) WriteHeader(code int) {
 	wrw.code = code
 	wrw.ResponseWriter.WriteHeader(code)
@@ -186,6 +197,10 @@ func (wrw *wrappedResponseWriter) WriteHeader(code int) {
 
 func logRequest(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/sse" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		wrw := &wrappedResponseWriter{
 			ResponseWriter: w,
 		}
