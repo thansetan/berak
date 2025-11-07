@@ -160,7 +160,7 @@ func (c *controller) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil && !errors.Is(err, io.EOF) {
-		c.logger.ErrorContext(r.Context(), "error adding new 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		c.logger.ErrorContext(r.Context(), "failed to add new 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		helper.OurFault(w)
 		return
 	}
@@ -178,7 +178,7 @@ func (c *controller) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	err = c.svc.Add(r.Context(), data.Timestamp.UTC())
 	if err != nil {
-		c.logger.ErrorContext(r.Context(), "error adding new 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		c.logger.ErrorContext(r.Context(), "failed to add new 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		helper.OurFault(w)
 		return
 	}
@@ -189,7 +189,7 @@ func (c *controller) Create(w http.ResponseWriter, r *http.Request) {
 func (c *controller) Delete(w http.ResponseWriter, r *http.Request) {
 	err := c.svc.DeleteLast(r.Context())
 	if err != nil {
-		c.logger.ErrorContext(r.Context(), "error removing last 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		c.logger.ErrorContext(r.Context(), "failed to remove last 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		helper.OurFault(w)
 		return
 	}
@@ -219,7 +219,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 
 	tableData, err := c.svc.GetMonthly(r.Context(), now, year)
 	if err != nil {
-		c.logger.ErrorContext(r.Context(), "error getting monthly data!", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to get monthly data!", "error", err)
 		helper.OurFault(w)
 		return
 	}
@@ -237,7 +237,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		Statistics: stats,
 	})
 	if err != nil {
-		c.logger.ErrorContext(r.Context(), "error executing year template", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		c.logger.ErrorContext(r.Context(), "failed to execute year template", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		helper.OurFault(w)
 	}
 }
@@ -273,7 +273,7 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 	}
 	tableData, err := c.svc.GetDaily(r.Context(), now, year, month)
 	if err != nil {
-		c.logger.ErrorContext(r.Context(), "error getting daily data!", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to get daily data!", "error", err)
 		helper.OurFault(w)
 		return
 	}
@@ -292,14 +292,14 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		Statistics: stats,
 	})
 	if err != nil {
-		c.logger.ErrorContext(r.Context(), "error executing month template", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		c.logger.ErrorContext(r.Context(), "failed to execute month template", "error", err.Error(), "remote_addr", r.RemoteAddr)
 	}
 }
 
 func (c *controller) GetLastPoopTime(w http.ResponseWriter, r *http.Request) {
 	lastPoopTime, err := c.svc.GetLastPoopTime(r.Context())
 	if err != nil {
-		c.logger.ErrorContext(r.Context(), "error getting last poop time", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		c.logger.ErrorContext(r.Context(), "failed to get last poop time", "error", err.Error(), "remote_addr", r.RemoteAddr)
 		helper.OurFault(w)
 		return
 	}
@@ -327,6 +327,6 @@ func (c controller) FourOFour(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	err := c.tmpl.ExecuteTemplate(w, "404", nil)
 	if err != nil {
-		c.logger.ErrorContext(r.Context(), "error executing 404 template", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		c.logger.ErrorContext(r.Context(), "failed to execute 404 template", "error", err.Error(), "remote_addr", r.RemoteAddr)
 	}
 }
