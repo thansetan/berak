@@ -41,7 +41,9 @@ func (c *controller) Event(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", os.Getenv("ALLOWED_SSE_ORIGINS"))
+	w.Header().Set("Access-Control-Allow-Methods", "GET")
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to create watcher!", "error", err)
