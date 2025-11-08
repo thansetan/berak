@@ -50,23 +50,7 @@ func main() {
 			return a + b
 		},
 		"getMonthName": func(monthNumber int) string {
-			if monthNumber == 0 || monthNumber > 12 {
-				return ""
-			}
-			return []string{
-				"January",
-				"February",
-				"March",
-				"April",
-				"May",
-				"June",
-				"July",
-				"August",
-				"September",
-				"October",
-				"November",
-				"December",
-			}[monthNumber-1]
+			return helper.GetMonth(monthNumber).Name
 		},
 		"tai": func(n int) string {
 			if n == 0 {

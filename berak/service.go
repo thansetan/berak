@@ -61,7 +61,7 @@ func (s *berakService) GetDaily(ctx context.Context, now time.Time, year uint64,
 
 	maxDays := now.Day()
 	if year < uint64(now.Year()) || (year == uint64(now.Year()) && month < uint64(now.Month())) {
-		maxDays = helper.MonthDays[int(month)]
+		maxDays = helper.GetMonth(int(month)).Days
 		if month == 2 && helper.IsLeapYear(int(year)) {
 			maxDays++
 		}

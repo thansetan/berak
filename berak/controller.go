@@ -247,31 +247,25 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	yearStr := vars["year"]
+	now := c.now()
 	year, err := strconv.ParseUint(yearStr, 10, 64)
-	if err != nil {
+	if err != nil || (year < 1 || year > uint64(now.Year())) {
 		c.FourOFour(w, r)
 		return
 	}
 
-	now := c.now()
-	if year < 1 || year > uint64(now.Year()) {
-		c.FourOFour(w, r)
-		return
-	}
 	monthStr := vars["month"]
 	month, err := strconv.ParseUint(monthStr, 10, 8)
-	if err != nil {
+	if err != nil || (month < 1 || month > 12) {
 		c.FourOFour(w, r)
 		return
 	}
+
 	if year == uint64(now.Year()) && month > uint64(now.Month()) {
 		c.FourOFour(w, r)
 		return
 	}
-	if _, ok := helper.MonthDays[int(month)]; !ok {
-		c.FourOFour(w, r)
-		return
-	}
+
 	tableData, err := c.svc.GetDaily(r.Context(), now, year, month)
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to get daily data!", "error", err)
