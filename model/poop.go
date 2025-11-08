@@ -6,16 +6,16 @@ import (
 )
 
 type Data struct {
-	Year  int
-	Month int
 	TableData
 	Statistics
+	Year  int
+	Month int
 }
 
 type TableData struct {
-	Year        int
 	CurrentTime time.Time
 	Data        []AggData
+	Year        int
 }
 
 type Statistics struct {

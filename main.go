@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,24 +24,27 @@ import (
 	"github.com/thansetan/berak/helper"
 )
 
-//go:embed templates/*
-var templateDirFS embed.FS
+var (
+	//go:embed templates/*
+	templateDirFS embed.FS
 
-//go:embed static/*
-var staticDirFS embed.FS
+	//go:embed static/*
+	staticDirFS embed.FS
 
-var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-	AddSource: true,
-}))
+	users = new(sync.Map)
+
+	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: true,
+	}))
+)
 
 func main() {
 	db, err := db.NewConn(os.Getenv("DATA_SOURCE_NAME"))
 	if err != nil {
-		panic(err)
+		logger.Error("failed to establish database connection!", "error", "err")
+		os.Exit(1)
 	}
 
-	repo := berak.NewRepo(db)
-	svc := berak.NewService(repo, os.Getenv("TIME_OFFSET"))
 	tmpl := template.New("").Funcs(template.FuncMap{
 		"add": func(a, b int) int {
 			return a + b
@@ -79,40 +83,46 @@ func main() {
 		return err
 	})
 	if err != nil {
-		panic(err)
+		logger.Error("failed to load template!", "error", err)
+		os.Exit(1)
 	}
+
+	repo := berak.NewRepo(db)
+	svc := berak.NewService(repo, os.Getenv("TIME_OFFSET"))
 	controller := berak.NewController(svc, tmpl, logger)
 
 	r := mux.NewRouter()
-
 	r.NotFoundHandler = http.HandlerFunc(controller.FourOFour)
 	r.MethodNotAllowedHandler = http.HandlerFunc(controller.FourOFour)
-
-	r.Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		now := time.Now()
-		http.Redirect(w, r, fmt.Sprintf("/%d", now.Year()), http.StatusTemporaryRedirect)
-	})
-
-	r.Path("/sse").HandlerFunc(controller.Event).Methods(http.MethodGet)
-	r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Create)))).Methods(http.MethodPost)
-	r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Delete)))).Methods(http.MethodDelete)
-	r.Path("/{year:[0-9]+}").HandlerFunc(controller.GetMonthly).Methods(http.MethodGet)
-	r.Path("/{year:[0-9]+}/{month:[0-9]+}").HandlerFunc(controller.GetDaily).Methods(http.MethodGet)
-	r.Path("/last_poop").HandlerFunc(controller.GetLastPoopTime).Methods(http.MethodGet)
-	r.Path("/healthcheck").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("ok"))
-	})
-	r.Path("/download").HandlerFunc(protected(http.HandlerFunc(controller.GetSQLiteFile))).Methods(http.MethodGet)
+	{
+		r.Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			now := time.Now()
+			http.Redirect(w, r, fmt.Sprintf("/%d", now.Year()), http.StatusTemporaryRedirect)
+		})
+		r.Path("/sse").HandlerFunc(controller.Event).Methods(http.MethodGet)
+		r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Create)))).Methods(http.MethodPost)
+		r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Delete)))).Methods(http.MethodDelete)
+		r.Path("/{year:[0-9]+}").HandlerFunc(controller.GetMonthly).Methods(http.MethodGet)
+		r.Path("/{year:[0-9]+}/{month:[0-9]+}").HandlerFunc(controller.GetDaily).Methods(http.MethodGet)
+		r.Path("/last_poop").HandlerFunc(controller.GetLastPoopTime).Methods(http.MethodGet)
+		r.Path("/healthcheck").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte("ok"))
+		})
+		r.Path("/download").HandlerFunc(protected(http.HandlerFunc(controller.GetSQLiteFile))).Methods(http.MethodGet)
+	}
 
 	staticFilesFS, err := fs.Sub(staticDirFS, "static")
 	if err != nil {
-		logger.Error("static dir doesn't exists!")
+		logger.Error("failed to get static files directory!", "error", err)
 		os.Exit(1)
 	}
 
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fsHandler := http.FileServer(http.FS(staticFilesFS))
-		if _, err := staticFilesFS.Open(r.URL.Path); os.IsNotExist(err) {
+		if _, err := staticFilesFS.Open(r.URL.Path); err != nil {
+			if !os.IsNotExist(err) {
+				logger.ErrorContext(r.Context(), "failed to open file!", "filepath", r.URL.Path, "error", err)
+			}
 			controller.FourOFour(w, r)
 			return
 		}
@@ -121,13 +131,13 @@ func main() {
 
 	srv := new(http.Server)
 	srv.Handler = logRequest(r)
-	srv.Addr = fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT"))
+	srv.Addr = net.JoinHostPort("0.0.0.0", os.Getenv("PORT"))
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("http error listening", "error", err.Error())
+			logger.Error("failed to listen and serve HTTP connection!", "error", err)
 		}
 	}()
 	logger.Info(fmt.Sprintf("server listeing at %s", srv.Addr))
@@ -135,7 +145,7 @@ func main() {
 	logger.Info("shutting down server")
 	err = srv.Shutdown(ctx)
 	if err != nil {
-		logger.Error("error shutting down server", "error", err.Error())
+		logger.Error("failed to shut down server!", "error", err)
 	}
 }
 
@@ -143,14 +153,12 @@ func protected(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Api-Key") != os.Getenv("BERAK_KEY") {
 			logger.WarnContext(r.Context(), "incorrect API-Key", "remote_addr", r.RemoteAddr, "api-key", r.Header.Get("X-Api-Key"))
-			helper.WriteResponseJSON(w, http.StatusUnauthorized, "gaboleh 😡")
+			helper.WriteJSON(w, http.StatusUnauthorized, "gaboleh 😡")
 			return
 		}
 		next.ServeHTTP(w, r)
 	}
 }
-
-var users = new(sync.Map)
 
 func rateLimit(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/thansetan/berak/helper"
 	"github.com/thansetan/berak/model"
 )
 
@@ -60,8 +61,8 @@ func (s *berakService) GetDaily(ctx context.Context, now time.Time, year uint64,
 
 	maxDays := now.Day()
 	if year < uint64(now.Year()) || (year == uint64(now.Year()) && month < uint64(now.Month())) {
-		maxDays = monthDays[int(month)]
-		if month == 2 && isLeapYear(int(year)) {
+		maxDays = helper.MonthDays[int(month)]
+		if month == 2 && helper.IsLeapYear(int(year)) {
 			maxDays++
 		}
 	}

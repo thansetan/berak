@@ -1,6 +1,6 @@
-package berak
+package helper
 
-var monthDays = map[int]int{
+var MonthDays = map[int]int{
 	1:  31,
 	2:  28,
 	3:  31,
@@ -15,7 +15,7 @@ var monthDays = map[int]int{
 	12: 31,
 }
 
-func isLeapYear(year int) bool {
+func IsLeapYear(year int) bool {
 	if year < 0 {
 		return false
 	}

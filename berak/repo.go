@@ -41,7 +41,9 @@ func (r *berakRepository) DeleteLast(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if n, err := res.RowsAffected(); err == nil && n == 0 {
+	if n, err := res.RowsAffected(); err != nil {
+		return err
+	} else if n == 0 {
 		return errors.New("no data")
 	}
 	return nil
@@ -126,7 +128,7 @@ func (r *berakRepository) GetLastDataTimestamp(ctx context.Context, offset strin
 	}
 	lastInsertAt, err := time.Parse("2006-01-02 15:04:05", s)
 	if err != nil {
-		return time.Time{}, nil
+		return time.Time{}, fmt.Errorf("error parsing lastInsertedAt: %w", err)
 	}
 	return lastInsertAt, nil
 }
@@ -149,13 +151,13 @@ func (r *berakRepository) GetLongestDayWithoutPoop(ctx context.Context, offset s
 	if startTime.Valid {
 		l.StartTime, err = time.Parse("2006-01-02 15:04:05", startTime.String)
 		if err != nil {
-			return model.LongestDayWithoutPoop{}, fmt.Errorf("failed to parse startTime: %s", err)
+			return model.LongestDayWithoutPoop{}, fmt.Errorf("error parsing startTime: %s", err)
 		}
 	}
 	if endTime.Valid {
 		l.EndTime, err = time.Parse("2006-01-02 15:04:05", endTime.String)
 		if err != nil {
-			return model.LongestDayWithoutPoop{}, fmt.Errorf("failed to parse endTime: %s", err)
+			return model.LongestDayWithoutPoop{}, fmt.Errorf("error parsing endTime: %s", err)
 		}
 	}
 

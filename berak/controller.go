@@ -37,7 +37,7 @@ func (c *controller) Event(w http.ResponseWriter, r *http.Request) {
 		c.logger.WarnContext(r.Context(), "invalid period!", "period", period)
 		return
 	}
-	c.logger.InfoContext(r.Context(), "client connected!", "ip_address", r.RemoteAddr, "params", r.URL.Query())
+	c.logger.InfoContext(r.Context(), "client connected!", "remote_addr", r.RemoteAddr, "params", r.URL.Query())
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -61,7 +61,7 @@ func (c *controller) Event(w http.ResponseWriter, r *http.Request) {
 		select {
 		case event, ok := <-watcher.Events:
 			if !ok {
-				c.logger.ErrorContext(r.Context(), "event is not a watcher.Events!")
+				c.logger.ErrorContext(r.Context(), "failed to read data from channel!")
 				break
 			}
 			if !event.Has(fsnotify.Write) {
@@ -150,7 +150,7 @@ func (c *controller) Event(w http.ResponseWriter, r *http.Request) {
 				c.logger.ErrorContext(r.Context(), "failed to flush to writer!", "error", err)
 			}
 		case <-r.Context().Done():
-			c.logger.InfoContext(r.Context(), "client disconnected!", "ip_address", r.RemoteAddr)
+			c.logger.InfoContext(r.Context(), "client disconnected!", "remote_addr", r.RemoteAddr)
 			return
 		}
 	}
@@ -200,6 +200,7 @@ func (c *controller) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *controller) now() time.Time {
+	// UTC + 7
 	return time.Now().UTC().Add(7 * time.Hour)
 }
 
@@ -212,7 +213,6 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// UTC + 7
 	now := c.now()
 	if year < 1 || year > uint64(now.Year()) {
 		c.FourOFour(w, r)
@@ -253,7 +253,6 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// UTC + 7
 	now := c.now()
 	if year < 1 || year > uint64(now.Year()) {
 		c.FourOFour(w, r)
@@ -269,7 +268,7 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		c.FourOFour(w, r)
 		return
 	}
-	if _, ok := monthDays[int(month)]; !ok {
+	if _, ok := helper.MonthDays[int(month)]; !ok {
 		c.FourOFour(w, r)
 		return
 	}
@@ -305,7 +304,7 @@ func (c *controller) GetLastPoopTime(w http.ResponseWriter, r *http.Request) {
 		helper.OurFault(w)
 		return
 	}
-	helper.WriteResponseJSON(w, http.StatusOK, struct {
+	helper.WriteJSON(w, http.StatusOK, struct {
 		LastPoopTime time.Time `json:"last_poop_time"`
 	}{
 		LastPoopTime: lastPoopTime,
