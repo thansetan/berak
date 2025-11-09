@@ -21,14 +21,13 @@ import (
 )
 
 type controller struct {
-	tmpl      *template.Template
-	logger    *slog.Logger
-	svc       *berakService
-	newPoopCh chan struct{}
+	tmpl   *template.Template
+	logger *slog.Logger
+	svc    *berakService
 }
 
 func NewController(svc *berakService, tmpl *template.Template, logger *slog.Logger) *controller {
-	return &controller{tmpl, logger, svc, make(chan struct{}, 10)}
+	return &controller{tmpl, logger, svc}
 }
 
 func (c *controller) Event(w http.ResponseWriter, r *http.Request) {
@@ -43,17 +42,20 @@ func (c *controller) Event(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", os.Getenv("ALLOWED_SSE_ORIGINS"))
 	w.Header().Set("Access-Control-Allow-Methods", "GET")
-
+	err := c.sendPoopData(w, r, period)
+	if err != nil {
+		c.logger.ErrorContext(r.Context(), "failed to send poop data!", "error", err, "remote_addr", r.RemoteAddr)
+	}
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		c.logger.ErrorContext(r.Context(), "failed to create watcher!", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to create watcher!", "error", err, "remote_addr", r.RemoteAddr)
 		helper.OurFault(w)
 		return
 	}
 	defer watcher.Close()
 	err = watcher.Add(os.Getenv("DATA_SOURCE_NAME"))
 	if err != nil {
-		c.logger.ErrorContext(r.Context(), "failed to watch sqlite file!", "error", err)
+		c.logger.ErrorContext(r.Context(), "failed to watch sqlite file!", "error", err, "remote_addr", r.RemoteAddr)
 		helper.OurFault(w)
 		return
 	}
@@ -68,92 +70,93 @@ func (c *controller) Event(w http.ResponseWriter, r *http.Request) {
 				c.logger.InfoContext(r.Context(), "event is not a write event!", "event", event.Name)
 				break
 			}
-			now := c.now()
-			yearStr := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("year")))
-			year, err := strconv.ParseUint(yearStr, 10, 64)
+			err = c.sendPoopData(w, r, period)
 			if err != nil {
-				c.logger.ErrorContext(r.Context(), "failed to parse year!", "error", err)
-				break
-			}
-			var (
-				tableData    model.TableData
-				templateName string
-				fetchTable   = uint64(now.Year()) == year
-			)
-			switch period {
-			case "monthly":
-				if !fetchTable {
-					break
-				}
-				tableData, err = c.svc.GetMonthly(r.Context(), now, year)
-				if err != nil {
-					c.logger.ErrorContext(r.Context(), "failed to get monthly data!", "error", err)
-					break
-				}
-				templateName = "monthly_table"
-			case "daily":
-				if !fetchTable {
-					break
-				}
-				monthStr := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("month")))
-				month, err := strconv.ParseUint(monthStr, 10, 64)
-				if uint64(now.Month()) != month {
-					fetchTable = false
-					break
-				}
-				if err != nil {
-					c.logger.ErrorContext(r.Context(), "failed to parse month!", "error", err)
-					break
-				}
-				tableData, err = c.svc.GetDaily(r.Context(), now, year, month)
-				if err != nil {
-					c.logger.ErrorContext(r.Context(), "failed to get daily data!", "error", err)
-					break
-				}
-				templateName = "daily_table"
-			}
-			m := make(map[string]string)
-
-			var buf bytes.Buffer
-			if fetchTable {
-				err = c.tmpl.ExecuteTemplate(&buf, templateName, tableData)
-				if err != nil {
-					c.logger.ErrorContext(r.Context(), "failed to execute template!", "name", templateName, "error", err)
-					break
-				}
-				m["poop-table"] = buf.String()
-				buf.Reset()
-			}
-
-			stats, err := c.svc.GetStatistics(r.Context())
-			if err != nil {
-				c.logger.ErrorContext(r.Context(), "failed to get statistics!", "error", err)
-			}
-
-			err = c.tmpl.ExecuteTemplate(&buf, "footer", stats)
-			if err != nil {
-				c.logger.ErrorContext(r.Context(), "failed to execute template!", "name", "footer", "error", err)
-				break
-			}
-			m["poop-footer"] = buf.String()
-
-			fmt.Fprint(w, "event:poopupdate\n")
-			jsonBytes, err := json.Marshal(m)
-			if err != nil {
-				c.logger.ErrorContext(r.Context(), "failed to marshal json!", "error", err)
-				break
-			}
-			fmt.Fprintf(w, "data:%s\n\n", string(jsonBytes))
-			rc := http.NewResponseController(w)
-			err = rc.Flush()
-			if err != nil {
-				c.logger.ErrorContext(r.Context(), "failed to flush to writer!", "error", err)
+				c.logger.ErrorContext(r.Context(), "failed to send poop data!", "error", err, "remote_addr", r.RemoteAddr)
 			}
 		case <-r.Context().Done():
 			c.logger.InfoContext(r.Context(), "client disconnected!", "remote_addr", r.RemoteAddr)
 			return
 		}
 	}
+}
+
+func (c *controller) sendPoopData(w http.ResponseWriter, r *http.Request, period string) error {
+	now := c.now()
+	yearStr := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("year")))
+	year, err := strconv.ParseUint(yearStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("error parsing year: %w", err)
+	}
+	var (
+		tableData    model.TableData
+		templateName string
+		fetchTable   = uint64(now.Year()) == year
+	)
+	switch period {
+	case "monthly":
+		if !fetchTable {
+			break
+		}
+		tableData, err = c.svc.GetMonthly(r.Context(), now, year)
+		if err != nil {
+			return fmt.Errorf("error getting monthly data: %w", err)
+		}
+		templateName = "monthly_table"
+	case "daily":
+		if !fetchTable {
+			break
+		}
+		monthStr := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("month")))
+		month, err := strconv.ParseUint(monthStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("error parsing month: %w", err)
+		}
+		if uint64(now.Month()) != month {
+			fetchTable = false
+			break
+		}
+		tableData, err = c.svc.GetDaily(r.Context(), now, year, month)
+		if err != nil {
+			return fmt.Errorf("error getting daily data: %w", err)
+		}
+		templateName = "daily_table"
+	}
+	m := make(map[string]string)
+
+	var buf bytes.Buffer
+	if fetchTable {
+		err = c.tmpl.ExecuteTemplate(&buf, templateName, tableData)
+		if err != nil {
+			return fmt.Errorf("error executing template[name=%s]: %w", templateName, err)
+		}
+		m["poop-table"] = buf.String()
+		buf.Reset()
+	}
+
+	stats, err := c.svc.GetStatistics(r.Context())
+	if err != nil {
+		return fmt.Errorf("error getting statistics: %w", err)
+	}
+
+	err = c.tmpl.ExecuteTemplate(&buf, "footer", stats)
+	if err != nil {
+		return fmt.Errorf("error executing template[name=footer]: %w", err)
+	}
+	m["poop-footer"] = buf.String()
+
+	fmt.Fprint(w, "event:poopupdate\n")
+	jsonBytes, err := json.Marshal(m)
+	if err != nil {
+		return fmt.Errorf("error marshalling JSON: %w", err)
+	}
+	fmt.Fprintf(w, "data:%s\n\n", string(jsonBytes))
+	rc := http.NewResponseController(w)
+	err = rc.Flush()
+	if err != nil {
+		return fmt.Errorf("error flushing writer: %w", err)
+	}
+	return nil
 }
 
 func (c *controller) Create(w http.ResponseWriter, r *http.Request) {
