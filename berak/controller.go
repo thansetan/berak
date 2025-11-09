@@ -163,6 +163,10 @@ func (c *controller) Create(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil && !errors.Is(err, io.EOF) {
 		c.logger.ErrorContext(r.Context(), "failed to add new 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
+		if _, ok := err.(*json.SyntaxError); ok {
+			helper.WriteMessage(w, http.StatusBadRequest, "invalid JSON format!")
+			return
+		}
 		helper.OurFault(w)
 		return
 	}
