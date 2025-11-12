@@ -47,7 +47,14 @@
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>"
     />
     <link rel="stylesheet" href="/css/style.css" />
-    <script src="/js/script.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"
+      integrity="sha512-01CJ9/g7e8cUmY0DFTMcUw/ikS799FHiOA0eyHsUWfOetgbx/t6oV4otQ5zXKQyIrQGTHSmRVPIgrgLcZi/WMA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+      defer
+    ></script>
+    <script src="/js/script.js" defer></script>
   </head>
   <body style="max-width: 80vw; margin: 0 auto">
     <header>
@@ -103,18 +110,11 @@
     </main>
 
     {{ template "footer" .Statistics }}
-
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"
-      integrity="sha512-01CJ9/g7e8cUmY0DFTMcUw/ikS799FHiOA0eyHsUWfOetgbx/t6oV4otQ5zXKQyIrQGTHSmRVPIgrgLcZi/WMA=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
     <script>
-      window.addEventListener("hashchange", highlight);
       document.addEventListener("DOMContentLoaded", () => {
+        window.addEventListener("hashchange", highlight);
         initCurrentTime();
-        listenToPoopEvent("daily", "{{.Year}}", "{{.Month}}");
+        listenToPoopEvent("daily", "{{.Year}}", "{{.Month}}", true);
         tableToImage("{{.Year}}", "{{.Month}}");
       });
     </script>

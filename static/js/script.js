@@ -12,7 +12,7 @@ const highlight = () => {
   }
 };
 
-const listenToPoopEvent = (period, year, month) => {
+const listenToPoopEvent = (period, year, month, triggerHighlight = false) => {
   const param = new URLSearchParams();
   param.append("period", period);
   param.append("year", year);
@@ -26,7 +26,9 @@ const listenToPoopEvent = (period, year, month) => {
       const elem = document.getElementById(k);
       elem.outerHTML = v;
     }
-    highlight();
+    if (triggerHighlight) {
+      highlight();
+    }
   });
 };
 
