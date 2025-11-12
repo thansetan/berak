@@ -47,6 +47,7 @@
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>"
     />
     <link rel="stylesheet" href="/css/style.css" />
+    <script src="/js/script.js"></script>
   </head>
   <body style="max-width: 80vw; margin: 0 auto">
     <header>
@@ -110,64 +111,11 @@
       referrerpolicy="no-referrer"
     ></script>
     <script>
+      window.addEventListener("hashchange", highlight);
       document.addEventListener("DOMContentLoaded", () => {
-        const eventSource = new EventSource(
-          "/sse?period=daily&year={{.Year}}&month={{.Month}}"
-        );
-        eventSource.addEventListener("poopupdate", (event) => {
-          const data = JSON.parse(event.data);
-          for (const [k, v] of Object.entries(data)) {
-            const elem = document.getElementById(k);
-            elem.outerHTML = v;
-          }
-        });
-      });
-      document.addEventListener("DOMContentLoaded", () => {
-        const prevHiglightedRows = document.querySelectorAll("tr.highlighted");
-        prevHiglightedRows.forEach((e) => e.classList.remove("highlighted"));
-        const currentTimeElem = document.querySelector("#currentTime");
-        setInterval(() => {
-          const currentTime = new Date();
-
-          const dateOptions = {
-            timeZone: "Asia/Jakarta",
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-          };
-          const timeOptions = {
-            timeZone: "Asia/Jakarta",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: false,
-          };
-
-          const formattedDate = currentTime.toLocaleDateString(
-            "en-GB",
-            dateOptions
-          );
-          const formattedTime = currentTime.toLocaleTimeString(
-            "en-GB",
-            timeOptions
-          );
-
-          currentTimeElem.textContent = `${formattedDate} ${formattedTime}`;
-        }, 1000);
-        const node = document.querySelector("#poop-log");
-        domtoimage
-          .toPng(node, {
-            bgcolor: "white",
-          })
-          .then(function (dataUrl) {
-            const downloadButton = document.querySelector("#download-button");
-            downloadButton.download = `poop-log-{{.Year}}-${"{{.Month}}".padStart(
-              2,
-              "0"
-            )}.png`;
-            downloadButton.href = dataUrl;
-            prevHiglightedRows.forEach((e) => e.classList.add("highlighted"));
-          });
+        initCurrentTime();
+        listenToPoopEvent("daily", "{{.Year}}", "{{.Month}}");
+        tableToImage("{{.Year}}", "{{.Month}}");
       });
     </script>
   </body>

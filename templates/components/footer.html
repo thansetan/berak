@@ -61,22 +61,4 @@
   </div>
   {{ end }}
 </footer>
-
-<script>
-  const highlight = () => {
-    const highlightedRows = document.querySelectorAll(
-      "#poop-log > table > tbody > tr.highlighted"
-    );
-    highlightedRows.forEach((e) => e.classList.remove("highlighted"));
-    const hash = location.hash.substring(1);
-    if (hash) {
-      const row = document.getElementById(hash);
-      if (row) {
-        row.classList.add("highlighted");
-      }
-    }
-  };
-  highlight();
-  window.addEventListener("hashchange", highlight);
-</script>
 {{ end }}
