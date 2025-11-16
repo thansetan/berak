@@ -9,9 +9,8 @@
       {{ .LastPoopAt.Format "02 January 2006 at 15:04" }} GMT+7
     </a>
   </p>
-  {{ end }}
-
-  {{ if or (not .LongestDayWithoutPoop.IsEmpty) (not .MostPoopInADay.IsEmpty) }}
+  {{ end }} {{ if or (not .LongestPoopStreak.IsEmpty) (or (not
+  .LongestDayWithoutPoop.IsEmpty) (not .MostPoopInADay.IsEmpty)) }}
   <div style="text-align: center; font-weight: bold; margin: 0.5em">
     Personal Records:
     <ul
@@ -23,9 +22,28 @@
         margin: 0;
       "
     >
-    {{ if not .LongestDayWithoutPoop.IsEmpty }}
+      {{ if not .LongestPoopStreak.IsEmpty }}
       <li style="margin: 0">
-        Longest no-💩 streak: 
+        Longest 💩 streak:
+        <span style="font-size: 0.85em"
+          >{{ .LongestPoopStreak.DayCount }} days ({{
+          .LongestPoopStreak.PoopCount }} 💩s dropped)! (From
+          <a
+            href="/{{ .LongestPoopStreak.StartDate.Year }}/{{ printf `%d` .LongestPoopStreak.StartDate.Month }}#{{ .LongestPoopStreak.StartDate.Day }}"
+          >
+            {{ .LongestPoopStreak.StartDate.Format "02 January 2006" }}
+          </a>
+          to
+          <a
+            href="/{{ .LongestPoopStreak.EndDate.Year }}/{{ printf `%d` .LongestPoopStreak.EndDate.Month }}#{{ .LongestPoopStreak.EndDate.Day }}"
+          >
+            {{ .LongestPoopStreak.EndDate.Format "02 January 2006" }}</a
+          >)
+        </span>
+      </li>
+      {{ end }} {{ if not .LongestDayWithoutPoop.IsEmpty }}
+      <li style="margin: 0">
+        Longest no-💩 streak:
         <span style="font-size: 0.85em"
           >{{ .LongestDayWithoutPoop }}! (From
           <a
@@ -37,15 +55,13 @@
           <a
             href="/{{ .LongestDayWithoutPoop.EndTime.Year }}/{{ printf `%d` .LongestDayWithoutPoop.EndTime.Month }}#{{ .LongestDayWithoutPoop.EndTime.Day }}"
           >
-            {{ .LongestDayWithoutPoop.EndTime.Format "02 January 2006 at 15:04"
-            }}</a
-          >)
+            {{ .LongestDayWithoutPoop.EndTime.Format "02 January 2006 at 15:04"}}
+          </a>)
         </span>
       </li>
-      {{ end }}
-      {{ if not .MostPoopInADay.IsEmpty }}
+      {{ end }} {{ if not .MostPoopInADay.IsEmpty }}
       <li style="margin: 0">
-        Most 💩s in a single day: 
+        Most 💩s in a single day:
         <span style="font-size: 0.85em"
           >{{ .MostPoopInADay.Count }} times (On
           <a

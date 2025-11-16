@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -22,6 +23,7 @@ type Statistics struct {
 	LastPoopAt            time.Time
 	LongestDayWithoutPoop LongestDayWithoutPoop
 	MostPoopInADay        MostPoopInADay
+	LongestPoopStreak     LongestPoopStreak
 }
 
 type AggData struct {
@@ -35,22 +37,45 @@ type LongestDayWithoutPoop struct {
 }
 
 func (l LongestDayWithoutPoop) IsEmpty() bool {
-	return (l.StartTime.IsZero() || l.EndTime.IsZero()) || (l.EndTime.Sub(l.StartTime) < time.Hour)
+	return (l.StartTime.IsZero() || l.EndTime.IsZero()) || (l.EndTime.Sub(l.StartTime) < time.Minute)
 }
 
 func (l LongestDayWithoutPoop) String() string {
+	var sb strings.Builder
 	timeDiff := l.EndTime.Sub(l.StartTime)
 	dayDiff := int(timeDiff.Hours()) / 24
 	hourDiff := int(timeDiff.Hours()) - 24*dayDiff
-	dayStr := "day"
-	hourStr := "hour"
-	if dayDiff != 1 {
-		dayStr += "s"
+	minuteDiff := int(timeDiff.Minutes()) - 24*dayDiff*60 - 60*hourDiff
+	if dayDiff > 0 {
+		fmt.Fprintf(&sb, "%d day", dayDiff)
+		if dayDiff > 1 {
+			sb.WriteByte('s')
+		}
 	}
-	if hourDiff != 1 {
-		hourStr += "s"
+	if hourDiff > 0 {
+		if sb.Len() != 0 {
+			if minuteDiff == 0 {
+				sb.WriteString(" and ")
+			} else {
+				sb.WriteString(", ")
+			}
+		}
+		fmt.Fprintf(&sb, "%d hour", hourDiff)
+		if hourDiff > 1 {
+			sb.WriteByte('s')
+		}
 	}
-	return fmt.Sprintf("%d %s and %d %s", dayDiff, dayStr, hourDiff, hourStr)
+	if minuteDiff > 0 {
+		if sb.Len() != 0 {
+			sb.WriteString(" and ")
+		}
+		fmt.Fprintf(&sb, "%d minute", minuteDiff)
+		if minuteDiff > 1 {
+			sb.WriteByte('s')
+		}
+	}
+
+	return sb.String()
 }
 
 type MostPoopInADay struct {
@@ -65,5 +90,14 @@ func (m MostPoopInADay) Path() string {
 }
 
 func (m MostPoopInADay) IsEmpty() bool {
-	return m.Count <= 1
+	return m.Count < 1
+}
+
+type LongestPoopStreak struct {
+	StartDate, EndDate  time.Time
+	DayCount, PoopCount int
+}
+
+func (l LongestPoopStreak) IsEmpty() bool {
+	return l.DayCount < 2
 }

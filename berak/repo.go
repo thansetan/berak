@@ -24,6 +24,7 @@ func (r *berakRepository) Add(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -32,6 +33,7 @@ func (r *berakRepository) AddWithDate(ctx context.Context, t time.Time) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -43,9 +45,10 @@ func (r *berakRepository) DeleteLast(ctx context.Context) error {
 	}
 	if n, err := res.RowsAffected(); err != nil {
 		return err
-	} else if n == 0 {
-		return errors.New("no data")
+	} else if n > 1 {
+		return fmt.Errorf("more than 1 data deleted: %d", n)
 	}
+
 	return nil
 }
 
@@ -96,7 +99,7 @@ func (r *berakRepository) GetDailyByMonthAndYear(ctx context.Context, year, mont
 	WHERE strftime('%Y', timestamp) = ? AND strftime('%m', timestamp) = ?
 	GROUP BY day
 	ORDER BY day;`, offset, fmt.Sprintf("%04d", year), fmt.Sprintf("%02d", month))
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 
@@ -114,7 +117,7 @@ func (r *berakRepository) GetDailyByMonthAndYear(ctx context.Context, year, mont
 }
 
 func (r *berakRepository) GetLastDataTimestamp(ctx context.Context, offset string) (time.Time, error) {
-	var s string
+	var lastPoopTime sql.NullString
 	err := r.db.QueryRowContext(ctx, `
 	WITH timestamp_with_offset AS (
 		SELECT
@@ -122,14 +125,18 @@ func (r *berakRepository) GetLastDataTimestamp(ctx context.Context, offset strin
 			DATETIME(timestamp, ?) timestamp
 		FROM berak
 	)
-	SELECT timestamp FROM timestamp_with_offset ORDER BY timestamp DESC LIMIT 1;`, offset).Scan(&s)
-	if err != nil {
+	SELECT timestamp FROM timestamp_with_offset ORDER BY timestamp DESC LIMIT 1`, offset).Scan(&lastPoopTime)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return time.Time{}, err
 	}
-	lastInsertAt, err := time.Parse("2006-01-02 15:04:05", s)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("error parsing lastInsertedAt: %w", err)
+	if !lastPoopTime.Valid {
+		return time.Time{}, nil
 	}
+	lastInsertAt, err := time.Parse("2006-01-02 15:04:05", lastPoopTime.String)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("parse lastInsertedAt: %w", err)
+	}
+
 	return lastInsertAt, nil
 }
 
@@ -137,27 +144,28 @@ func (r *berakRepository) GetLongestDayWithoutPoop(ctx context.Context, offset s
 	var startTime, endTime sql.NullString
 	err := r.db.QueryRowContext(ctx, `
 		SELECT
-    		DATETIME(timestamp, '7 hours') timestamp,
-    		LAG(DATETIME(timestamp, '7 hours')) OVER (ORDER BY timestamp) prev_timestamp
+    		DATETIME(timestamp, ?) timestamp,
+    		LAG(DATETIME(timestamp, ?)) OVER (ORDER BY timestamp) prev_timestamp
 		FROM berak
 		ORDER BY JULIANDAY(timestamp) - JULIANDAY(prev_timestamp) DESC LIMIT 1
 		`, offset, offset).Scan(&endTime, &startTime)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return model.LongestDayWithoutPoop{}, err
 	}
 
 	var l model.LongestDayWithoutPoop
 
+	timeLayout := "2006-01-02 15:04:05"
 	if startTime.Valid {
-		l.StartTime, err = time.Parse("2006-01-02 15:04:05", startTime.String)
+		l.StartTime, err = time.Parse(timeLayout, startTime.String)
 		if err != nil {
-			return model.LongestDayWithoutPoop{}, fmt.Errorf("error parsing startTime: %s", err)
+			return model.LongestDayWithoutPoop{}, fmt.Errorf("parse startTime: %s", err)
 		}
 	}
 	if endTime.Valid {
-		l.EndTime, err = time.Parse("2006-01-02 15:04:05", endTime.String)
+		l.EndTime, err = time.Parse(timeLayout, endTime.String)
 		if err != nil {
-			return model.LongestDayWithoutPoop{}, fmt.Errorf("error parsing endTime: %s", err)
+			return model.LongestDayWithoutPoop{}, fmt.Errorf("parse endTime: %s", err)
 		}
 	}
 
@@ -182,5 +190,48 @@ func (r *berakRepository) GetMostPoopInADay(ctx context.Context, offset string) 
 	if err != nil {
 		return model.MostPoopInADay{}, err
 	}
+
+	return m, nil
+}
+
+func (r *berakRepository) GetLongestPoopStreak(ctx context.Context, offset string) (model.LongestPoopStreak, error) {
+	var (
+		startDate, endDate sql.NullString
+		m                  model.LongestPoopStreak
+	)
+	err := r.db.QueryRowContext(ctx, `
+	WITH poop_per_day AS (SELECT DATE(timestamp, ?) poop_date,
+                             COUNT(timestamp)            poop_count
+                      FROM berak
+                      GROUP BY poop_date),
+     grouped_poop AS (SELECT poop_date,
+                             poop_count,
+                             JULIANDAY(poop_date) - ROW_NUMBER() OVER (ORDER BY poop_date)
+                                 "group"
+                      FROM poop_per_day)
+	SELECT MIN(poop_date)   start_date,
+	       MAX(poop_date)   end_date,
+	       COUNT(poop_date) day_count,
+	       SUM(poop_count)  poop_count
+	FROM grouped_poop
+	GROUP BY "group"
+	ORDER BY day_count DESC LIMIT 1`, offset).Scan(&startDate, &endDate, &m.DayCount, &m.PoopCount)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return model.LongestPoopStreak{}, err
+	}
+	timeLayout := "2006-01-02"
+	if startDate.Valid {
+		m.StartDate, err = time.Parse(timeLayout, startDate.String)
+		if err != nil {
+			return model.LongestPoopStreak{}, fmt.Errorf("parse startDate: %w", err)
+		}
+	}
+	if endDate.Valid {
+		m.EndDate, err = time.Parse(timeLayout, endDate.String)
+		if err != nil {
+			return model.LongestPoopStreak{}, fmt.Errorf("parse endDate: %w", err)
+		}
+	}
+
 	return m, nil
 }

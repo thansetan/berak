@@ -165,9 +165,15 @@ func (c *controller) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil && !errors.Is(err, io.EOF) {
-		c.logger.ErrorContext(r.Context(), "failed to add new 💩", "error", err.Error(), "remote_addr", r.RemoteAddr)
-		if _, ok := err.(*json.SyntaxError); ok {
+		c.logger.ErrorContext(r.Context(), "failed to add new 💩", "error", err.Error(), "remote_addr", r.RemoteAddr, "error_type", fmt.Sprintf("%T", err))
+		_, jsonUnmarshalTypeErrorOK := err.(*json.UnmarshalTypeError)
+		_, jsonSyntaxErrorOK := err.(*json.SyntaxError)
+		if jsonUnmarshalTypeErrorOK || jsonSyntaxErrorOK || errors.Is(err, io.ErrUnexpectedEOF) {
 			helper.WriteMessage(w, http.StatusBadRequest, "invalid JSON format!")
+			return
+		}
+		if timeErr, ok := err.(*time.ParseError); ok {
+			helper.WriteMessage(w, http.StatusBadRequest, fmt.Sprintf("failed to parse timestamp%s", timeErr.Message))
 			return
 		}
 		helper.OurFault(w)
