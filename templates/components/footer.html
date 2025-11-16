@@ -26,48 +26,39 @@
       <li style="margin: 0">
         Longest 💩 streak:
         <span style="font-size: 0.85em"
-          >{{ .LongestPoopStreak.DayCount }} days ({{
-          .LongestPoopStreak.PoopCount }} 💩s dropped)! (From
-          <a
+          >{{ .LongestPoopStreak.DayCount }} days (<a
             href="/{{ .LongestPoopStreak.StartDate.Year }}/{{ printf `%d` .LongestPoopStreak.StartDate.Month }}#{{ .LongestPoopStreak.StartDate.Day }}"
+          >{{ .LongestPoopStreak.StartDate.Format "02 January 2006" }}</a
           >
-            {{ .LongestPoopStreak.StartDate.Format "02 January 2006" }}
-          </a>
           to
           <a
             href="/{{ .LongestPoopStreak.EndDate.Year }}/{{ printf `%d` .LongestPoopStreak.EndDate.Month }}#{{ .LongestPoopStreak.EndDate.Day }}"
-          >
-            {{ .LongestPoopStreak.EndDate.Format "02 January 2006" }}</a
-          >)
+          >{{ .LongestPoopStreak.EndDate.Format "02 January 2006" }}</a
+          >) with {{ .LongestPoopStreak.PoopCount }} 💩s dropped!
         </span>
       </li>
       {{ end }} {{ if not .LongestDayWithoutPoop.IsEmpty }}
       <li style="margin: 0">
         Longest no-💩 streak:
         <span style="font-size: 0.85em"
-          >{{ .LongestDayWithoutPoop }}! (From
-          <a
+          >{{ .LongestDayWithoutPoop }} (<a
             href="/{{ .LongestDayWithoutPoop.StartTime.Year }}/{{ printf `%d` .LongestDayWithoutPoop.StartTime.Month }}#{{ .LongestDayWithoutPoop.StartTime.Day }}"
+          >{{ .LongestDayWithoutPoop.StartTime.Format "02 January 2006 at 15:04" }}</a
           >
-            {{ .LongestDayWithoutPoop.StartTime.Format "02 January 2006 at 15:04" }}
-          </a>
           to
           <a
             href="/{{ .LongestDayWithoutPoop.EndTime.Year }}/{{ printf `%d` .LongestDayWithoutPoop.EndTime.Month }}#{{ .LongestDayWithoutPoop.EndTime.Day }}"
-          >
-            {{ .LongestDayWithoutPoop.EndTime.Format "02 January 2006 at 15:04"}}
-          </a>)
+          >{{ .LongestDayWithoutPoop.EndTime.Format "02 January 2006 at 15:04"}}</a
+          >)!
         </span>
       </li>
       {{ end }} {{ if not .MostPoopInADay.IsEmpty }}
       <li style="margin: 0">
         Most 💩s in a single day:
         <span style="font-size: 0.85em"
-          >{{ .MostPoopInADay.Count }} times (On
-          <a
+          >{{ .MostPoopInADay.Count }} times (<a
             href="/{{ .MostPoopInADay.Year }}/{{ .MostPoopInADay.Month }}#{{ .MostPoopInADay.Day }}"
-          >
-            {{ printf "%.02d %s %d" .MostPoopInADay.Day (getMonthName
+          >{{ printf "%.02d %s %d" .MostPoopInADay.Day (getMonthName
             .MostPoopInADay.Month) .MostPoopInADay.Year }}</a
           >)
         </span>
