@@ -31,7 +31,7 @@ var (
 	//go:embed static/*
 	staticDirFS embed.FS
 
-	users = new(sync.Map)
+	apiKeys = new(sync.Map)
 
 	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		AddSource: true,
@@ -84,8 +84,8 @@ func main() {
 			http.Redirect(w, r, fmt.Sprintf("/%d", now.Year()), http.StatusTemporaryRedirect)
 		})
 		r.Path("/sse").HandlerFunc(controller.Event).Methods(http.MethodGet)
-		r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Create)))).Methods(http.MethodPost)
-		r.Path("/berak").HandlerFunc(rateLimit(protected(http.HandlerFunc(controller.Delete)))).Methods(http.MethodDelete)
+		r.Path("/berak").HandlerFunc(protected(rateLimit(http.HandlerFunc(controller.Create)))).Methods(http.MethodPost)
+		r.Path("/berak").HandlerFunc(protected(rateLimit(http.HandlerFunc(controller.Delete)))).Methods(http.MethodDelete)
 		r.Path("/{year:[0-9]+}").HandlerFunc(controller.GetMonthly).Methods(http.MethodGet)
 		r.Path("/{year:[0-9]+}/{month:[0-9]+}").HandlerFunc(controller.GetDaily).Methods(http.MethodGet)
 		r.Path("/last_poop").HandlerFunc(controller.GetLastPoopTime).Methods(http.MethodGet)
@@ -137,7 +137,7 @@ func protected(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Api-Key") != os.Getenv("BERAK_KEY") {
 			logger.WarnContext(r.Context(), "incorrect API-Key", "remote_addr", r.RemoteAddr, "api-key", r.Header.Get("X-Api-Key"))
-			helper.WriteJSON(w, http.StatusUnauthorized, "gaboleh 😡")
+			helper.WriteMessage(w, http.StatusUnauthorized, "gaboleh 😡")
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -147,12 +147,7 @@ func protected(next http.Handler) http.HandlerFunc {
 func rateLimit(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		apiKey := r.Header.Get("X-API-KEY")
-		if apiKey == "" {
-			logger.WarnContext(r.Context(), "empty API-Key", "remote_addr", r.RemoteAddr)
-			helper.WriteMessage(w, http.StatusUnauthorized, "gaboleh 😡")
-			return
-		}
-		lastAccess, ok := users.LoadOrStore(apiKey, time.Now())
+		lastAccess, ok := apiKeys.LoadOrStore(apiKey, time.Now())
 		if ok {
 			lastAccessedAt, ok := lastAccess.(time.Time)
 			if !ok {
@@ -165,7 +160,7 @@ func rateLimit(next http.Handler) http.HandlerFunc {
 				helper.WriteMessage(w, http.StatusTooManyRequests, "kecepeten 😡")
 				return
 			}
-			users.Store(apiKey, time.Now())
+			apiKeys.Store(apiKey, time.Now())
 		}
 		next.ServeHTTP(w, r)
 	}
