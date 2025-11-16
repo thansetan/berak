@@ -22,8 +22,8 @@ type TableData struct {
 type Statistics struct {
 	LastPoopAt            time.Time
 	LongestDayWithoutPoop LongestDayWithoutPoop
-	MostPoopInADay        MostPoopInADay
 	LongestPoopStreak     LongestPoopStreak
+	MostPoopInADay        MostPoopInADay
 }
 
 type AggData struct {

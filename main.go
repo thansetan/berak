@@ -22,6 +22,7 @@ import (
 	"github.com/thansetan/berak/berak"
 	"github.com/thansetan/berak/db"
 	"github.com/thansetan/berak/helper"
+	"github.com/thansetan/berak/middleware"
 )
 
 var (
@@ -32,13 +33,12 @@ var (
 	staticDirFS embed.FS
 
 	apiKeys = new(sync.Map)
-
-	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		AddSource: true,
-	}))
 )
 
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: true,
+	}))
 	db, err := db.NewConn(os.Getenv("DATA_SOURCE_NAME"))
 	if err != nil {
 		logger.Error("failed to establish database connection!", "error", "err")
@@ -78,14 +78,36 @@ func main() {
 	r := mux.NewRouter()
 	r.NotFoundHandler = http.HandlerFunc(controller.FourOFour)
 	r.MethodNotAllowedHandler = http.HandlerFunc(controller.FourOFour)
+
+	apiKeyRateLimiter := middleware.NewRateLimit(1, time.Minute, func(r *http.Request) string {
+		return r.Header.Get("X-Api-Key")
+	})
+
+	ipRateLimiter := middleware.NewRateLimit(5, time.Minute, func(r *http.Request) string {
+		if xff := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); xff != "" {
+			parts := strings.Split(xff, ",")
+			return strings.TrimSpace(parts[0])
+		}
+		if xr := strings.TrimSpace(r.Header.Get("X-Real-Ip")); xr != "" {
+			return xr
+		}
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			return r.RemoteAddr
+		}
+		return host
+	})
+
+	loggerMW := middleware.NewLogger(logger)
+
 	{
 		r.Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			now := time.Now()
 			http.Redirect(w, r, fmt.Sprintf("/%d", now.Year()), http.StatusTemporaryRedirect)
 		})
 		r.Path("/sse").HandlerFunc(controller.Event).Methods(http.MethodGet)
-		r.Path("/berak").HandlerFunc(protected(rateLimit(http.HandlerFunc(controller.Create)))).Methods(http.MethodPost)
-		r.Path("/berak").HandlerFunc(protected(rateLimit(http.HandlerFunc(controller.Delete)))).Methods(http.MethodDelete)
+		r.Path("/berak").HandlerFunc(ipRateLimiter.Handle(protected(apiKeyRateLimiter.Handle(http.HandlerFunc(controller.Create))))).Methods(http.MethodPost)
+		r.Path("/berak").HandlerFunc(ipRateLimiter.Handle(protected(apiKeyRateLimiter.Handle(http.HandlerFunc(controller.Delete))))).Methods(http.MethodDelete)
 		r.Path("/{year:[0-9]+}").HandlerFunc(controller.GetMonthly).Methods(http.MethodGet)
 		r.Path("/{year:[0-9]+}/{month:[0-9]+}").HandlerFunc(controller.GetDaily).Methods(http.MethodGet)
 		r.Path("/last_poop").HandlerFunc(controller.GetLastPoopTime).Methods(http.MethodGet)
@@ -114,7 +136,7 @@ func main() {
 	})))
 
 	srv := new(http.Server)
-	srv.Handler = logRequest(r)
+	srv.Handler = loggerMW.Handle(r)
 	srv.Addr = net.JoinHostPort("0.0.0.0", os.Getenv("PORT"))
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
@@ -136,69 +158,9 @@ func main() {
 func protected(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Api-Key") != os.Getenv("BERAK_KEY") {
-			logger.WarnContext(r.Context(), "incorrect API-Key", "remote_addr", r.RemoteAddr, "api-key", r.Header.Get("X-Api-Key"))
 			helper.WriteMessage(w, http.StatusUnauthorized, "gaboleh 😡")
 			return
 		}
 		next.ServeHTTP(w, r)
-	}
-}
-
-func rateLimit(next http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		apiKey := r.Header.Get("X-API-KEY")
-		lastAccess, ok := apiKeys.LoadOrStore(apiKey, time.Now())
-		if ok {
-			lastAccessedAt, ok := lastAccess.(time.Time)
-			if !ok {
-				logger.ErrorContext(r.Context(), "failed to assert interface to time.Time", "remote_addr", r.RemoteAddr)
-				helper.OurFault(w)
-				return
-			}
-			if time.Since(lastAccessedAt) < time.Minute {
-				logger.WarnContext(r.Context(), "rate limited", "api-key", apiKey, "remote_addr", r.RemoteAddr)
-				helper.WriteMessage(w, http.StatusTooManyRequests, "kecepeten 😡")
-				return
-			}
-			apiKeys.Store(apiKey, time.Now())
-		}
-		next.ServeHTTP(w, r)
-	}
-}
-
-type wrappedResponseWriter struct {
-	http.ResponseWriter
-	code int
-}
-
-func (wrw *wrappedResponseWriter) Flush() {
-	if flusher, ok := wrw.ResponseWriter.(http.Flusher); ok {
-		flusher.Flush()
-	}
-}
-
-func (wrw *wrappedResponseWriter) WriteHeader(code int) {
-	wrw.code = code
-	wrw.ResponseWriter.WriteHeader(code)
-}
-
-func logRequest(next http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/sse" {
-			next.ServeHTTP(w, r)
-			return
-		}
-		wrw := &wrappedResponseWriter{
-			ResponseWriter: w,
-		}
-		t0 := time.Now()
-		next.ServeHTTP(wrw, r)
-		if wrw.code < 400 {
-			logger.InfoContext(r.Context(), fmt.Sprintf("%s %s %s", r.Method, r.RequestURI, r.Proto), "remote_addr", r.RemoteAddr, "code", wrw.code, "took", time.Since(t0))
-		} else if wrw.code < 500 {
-			logger.WarnContext(r.Context(), fmt.Sprintf("%s %s %s", r.Method, r.RequestURI, r.Proto), "remote_addr", r.RemoteAddr, "code", wrw.code, "took", time.Since(t0))
-		} else {
-			logger.ErrorContext(r.Context(), fmt.Sprintf("%s %s %s", r.Method, r.RequestURI, r.Proto), "remote_addr", r.RemoteAddr, "code", wrw.code, "took", time.Since(t0))
-		}
 	}
 }
