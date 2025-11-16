@@ -9,10 +9,10 @@ import (
 )
 
 type RateLimit struct {
-	store         *sync.Map
-	keyGetter     func(r *http.Request) string
-	maxVisitCount uint64
-	duration      time.Duration
+	store                     *sync.Map
+	keyGetter                 func(r *http.Request) string
+	maxVisitCount             uint64
+	duration, cleanupDuration time.Duration
 }
 
 type visitor struct {
@@ -21,10 +21,11 @@ type visitor struct {
 	count       uint64
 }
 
-func NewRateLimit(maxVisitCount uint64, duration time.Duration, keyGetter func(*http.Request) string) *RateLimit {
+func NewRateLimit(maxVisitCount uint64, duration, cleanupDuration time.Duration, keyGetter func(*http.Request) string) *RateLimit {
 	rl := new(RateLimit)
 	rl.maxVisitCount = (maxVisitCount)
 	rl.duration = duration
+	rl.cleanupDuration = cleanupDuration
 	rl.keyGetter = keyGetter
 	rl.store = new(sync.Map)
 	go rl.cleanup()
@@ -60,7 +61,7 @@ func (rl *RateLimit) Handle(next http.Handler) http.HandlerFunc {
 }
 
 func (rl *RateLimit) cleanup() {
-	for range time.Tick(10 * time.Second) {
+	for range time.Tick(rl.cleanupDuration) {
 		rl.store.Range(func(key, value any) bool {
 			v := value.(*visitor)
 			v.mu.RLock()

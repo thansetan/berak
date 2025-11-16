@@ -79,11 +79,11 @@ func main() {
 	r.NotFoundHandler = http.HandlerFunc(controller.FourOFour)
 	r.MethodNotAllowedHandler = http.HandlerFunc(controller.FourOFour)
 
-	apiKeyRateLimiter := middleware.NewRateLimit(1, time.Minute, func(r *http.Request) string {
+	apiKeyRateLimiter := middleware.NewRateLimit(1, time.Minute, 1*time.Hour, func(r *http.Request) string {
 		return r.Header.Get("X-Api-Key")
 	})
 
-	ipRateLimiter := middleware.NewRateLimit(5, time.Minute, func(r *http.Request) string {
+	ipRateLimiter := middleware.NewRateLimit(5, time.Minute, 1*time.Hour, func(r *http.Request) string {
 		if xff := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); xff != "" {
 			parts := strings.Split(xff, ",")
 			return strings.TrimSpace(parts[0])
