@@ -79,16 +79,15 @@
         <h1 style="text-align: center">💩 {{ .Year }} 💩</h1>
         {{ template "monthly_table" .TableData }}
       </div>
-      <a id="download-button">
-        <button style="margin-top: 20px">Save as Image</button>
-      </a>
+      <button style="margin-top: 20px" onclick="tableToImage('{{.Year}}')">
+        Save as Image
+      </button>
     </main>
     {{ template "footer" .Statistics }}
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         initCurrentTime();
         listenToPoopEvent("monthly", "{{.Year}}");
-        tableToImage("{{.Year}}");
       });
     </script>
   </body>

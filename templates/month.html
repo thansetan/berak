@@ -104,18 +104,20 @@
         </h1>
         {{ template "daily_table" .TableData }}
       </div>
-      <a id="download-button">
-        <button style="margin-top: 20px">Save as Image</button>
-      </a>
+      <button
+        style="margin-top: 20px"
+        onclick="tableToImage('{{.Year}}', '{{.Month}}')"
+      >
+        Save as Image
+      </button>
     </main>
 
     {{ template "footer" .Statistics }}
     <script>
       document.addEventListener("DOMContentLoaded", () => {
-        window.addEventListener("hashchange", highlight);
+        globalThis.addEventListener("hashchange", highlight);
         initCurrentTime();
         listenToPoopEvent("daily", "{{.Year}}", "{{.Month}}", true);
-        tableToImage("{{.Year}}", "{{.Month}}");
       });
     </script>
   </body>

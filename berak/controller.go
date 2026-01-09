@@ -42,6 +42,12 @@ func (c *controller) Event(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", os.Getenv("ALLOWED_SSE_ORIGINS"))
 	w.Header().Set("Access-Control-Allow-Methods", "GET")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	fmt.Fprint(w, "retry:3000\n\n")
+	rc := http.NewResponseController(w)
+	rc.Flush()
+
 	err := c.sendPoopData(w, r, period)
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to send poop data!", "error", err, "remote_addr", r.RemoteAddr)
@@ -59,6 +65,10 @@ func (c *controller) Event(w http.ResponseWriter, r *http.Request) {
 		helper.OurFault(w)
 		return
 	}
+
+	keepaliveTicker := time.NewTicker(25 * time.Second)
+	defer keepaliveTicker.Stop()
+
 	for {
 		select {
 		case event, ok := <-watcher.Events:
@@ -73,6 +83,17 @@ func (c *controller) Event(w http.ResponseWriter, r *http.Request) {
 			err = c.sendPoopData(w, r, period)
 			if err != nil {
 				c.logger.ErrorContext(r.Context(), "failed to send poop data!", "error", err, "remote_addr", r.RemoteAddr)
+			}
+		case <-keepaliveTicker.C:
+			_, err := fmt.Fprint(w, ":ping\n\n")
+			if err != nil {
+				c.logger.InfoContext(r.Context(), "keepalive ping failed, client likely disconnected", "remote_addr", r.RemoteAddr)
+				return
+			}
+			err = rc.Flush()
+			if err != nil {
+				c.logger.InfoContext(r.Context(), "flush failed, client likely disconnected", "remote_addr", r.RemoteAddr)
+				return
 			}
 		case <-r.Context().Done():
 			c.logger.InfoContext(r.Context(), "client disconnected!", "remote_addr", r.RemoteAddr)

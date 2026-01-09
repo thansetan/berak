@@ -12,6 +12,137 @@ const highlight = () => {
   }
 };
 
+const isIOS =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.userAgent.includes("Mac") && navigator.maxTouchPoints > 1);
+
+class SSEClient {
+  constructor(url, options = {}) {
+    this.url = url;
+    this.onMessage = options.onMessage || (() => {});
+    this.onError = options.onError || (() => {});
+    this.eventSource = null;
+    this.isConnected = false;
+    this.isPaused = false;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 10;
+    this.baseReconnectDelay = 1000;
+
+    this._bindLifecycleHandlers();
+  }
+
+  connect() {
+    if (this.eventSource || this.isPaused) {
+      return;
+    }
+
+    try {
+      this.eventSource = new EventSource(this.url);
+
+      this.eventSource.addEventListener("poopupdate", (event) => {
+        this.reconnectAttempts = 0;
+        this.onMessage(event);
+      });
+
+      this.eventSource.addEventListener("open", () => {
+        this.isConnected = true;
+        this.reconnectAttempts = 0;
+      });
+
+      this.eventSource.addEventListener("error", (event) => {
+        this.isConnected = false;
+        this.onError(event);
+
+        if (this.eventSource?.readyState === EventSource.CLOSED) {
+          this._scheduleReconnect();
+        }
+      });
+    } catch {
+      this._scheduleReconnect();
+    }
+  }
+
+  disconnect() {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+      this.isConnected = false;
+    }
+  }
+
+  reconnect() {
+    this.disconnect();
+    this.isPaused = false;
+    this.connect();
+  }
+
+  pause() {
+    this.isPaused = true;
+    this.disconnect();
+  }
+
+  resume() {
+    this.isPaused = false;
+    this.connect();
+  }
+
+  _scheduleReconnect() {
+    if (this.isPaused || this.reconnectAttempts >= this.maxReconnectAttempts) {
+      return;
+    }
+
+    const delay = Math.min(
+      this.baseReconnectDelay * Math.pow(2, this.reconnectAttempts),
+      30000
+    );
+    this.reconnectAttempts++;
+
+    setTimeout(() => {
+      if (!this.isPaused && !this.isConnected) {
+        this.reconnect();
+      }
+    }, delay);
+  }
+
+  _bindLifecycleHandlers() {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        if (!this.isPaused && !this.isConnected) {
+          this.reconnect();
+        }
+      } else if (isIOS) {
+        this.disconnect();
+      }
+    });
+
+    if ("onfreeze" in document) {
+      document.addEventListener("freeze", () => {
+        this.disconnect();
+      });
+
+      document.addEventListener("resume", () => {
+        if (!this.isPaused) {
+          this.reconnect();
+        }
+      });
+    }
+
+    window.addEventListener("pagehide", (event) => {
+      if (!event.persisted && !isIOS) {
+        this.disconnect();
+      }
+    });
+
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted && !this.isPaused && !this.isConnected) {
+        this.reconnect();
+      }
+    });
+  }
+}
+
+let sseClient = null;
+
 const listenToPoopEvent = (period, year, month, triggerHighlight = false) => {
   const param = new URLSearchParams();
   param.append("period", period);
@@ -19,17 +150,26 @@ const listenToPoopEvent = (period, year, month, triggerHighlight = false) => {
   if (month) {
     param.append("month", month);
   }
-  const eventSource = new EventSource(`/sse?${param.toString()}`);
-  eventSource.addEventListener("poopupdate", (event) => {
-    const data = JSON.parse(event.data);
-    for (const [k, v] of Object.entries(data)) {
-      const elem = document.getElementById(k);
-      elem.outerHTML = v;
-    }
-    if (triggerHighlight) {
-      highlight();
-    }
+
+  sseClient = new SSEClient(`/sse?${param.toString()}`, {
+    onMessage: (event) => {
+      const data = JSON.parse(event.data);
+      for (const [k, v] of Object.entries(data)) {
+        const elem = document.getElementById(k);
+        if (elem) {
+          elem.outerHTML = v;
+        }
+      }
+      if (triggerHighlight) {
+        highlight();
+      }
+    },
+    onError: (event) => {
+      console.error("SSE error:", event);
+    },
   });
+
+  sseClient.connect();
 };
 
 const initCurrentTime = () => {
@@ -77,12 +217,39 @@ const tableToImage = (year, month) => {
     .toPng(node, {
       bgcolor: "white",
     })
-    .then(function (dataUrl) {
-      const downloadButton = document.querySelector("#download-button");
-      downloadButton.download = `poop-log-${year}${
-        !month ? "" : "-" + month.padStart(2, "0")
+    .then((dataUrl) => fetch(dataUrl))
+    .then((res) => res.blob())
+    .then((blob) => {
+      const downloadButton = document.createElement("a");
+      const filename = `poop-log-${year}${
+        month ? "-" + month.padStart(2, "0") : ""
       }.png`;
-      downloadButton.href = dataUrl;
+      downloadButton.download = filename;
+      downloadButton.href = URL.createObjectURL(blob);
       prevHiglightedRows.forEach((e) => e.classList.add("highlighted"));
+      if (isIOS && sseClient) {
+        sseClient.pause();
+        setTimeout(() => {
+          sseClient.resume();
+        }, 1000);
+      }
+      downloadButton.click();
     });
+  // .then(function (dataUrl) {
+  //   const downloadButton = document.createElement("a");
+  //   const filename = `poop-log-${year}${
+  //     month ? "-" + month.padStart(2, "0") : ""
+  //   }.png`;
+  //   downloadButton.download = filename;
+  //   downloadButton.href = dataUrl;
+  //   prevHiglightedRows.forEach((e) => e.classList.add("highlighted"));
+  //   if (isIOS && sseClient) {
+  //     sseClient.pause();
+  //     setTimeout(() => {
+  //       sseClient.resume();
+  //     }, 1000);
+  //   }
+  //   downloadButton.click();
+  //   downloadButton.remove();
+  // });
 };
