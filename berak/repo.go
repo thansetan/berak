@@ -215,7 +215,7 @@ func (r *berakRepository) GetLongestPoopStreak(ctx context.Context, offset strin
 	       SUM(poop_count)  poop_count
 	FROM grouped_poop
 	GROUP BY "group"
-	ORDER BY day_count DESC LIMIT 1`, offset).Scan(&startDate, &endDate, &m.DayCount, &m.PoopCount)
+	ORDER BY day_count DESC, end_date DESC LIMIT 1`, offset).Scan(&startDate, &endDate, &m.DayCount, &m.PoopCount)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return model.LongestPoopStreak{}, err
 	}
