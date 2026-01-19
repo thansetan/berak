@@ -14,7 +14,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -31,8 +30,6 @@ var (
 
 	//go:embed static/*
 	staticDirFS embed.FS
-
-	apiKeys = new(sync.Map)
 )
 
 func main() {
