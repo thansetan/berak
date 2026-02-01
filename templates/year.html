@@ -79,7 +79,11 @@
         <h1 style="text-align: center">💩 {{ .Year }} 💩</h1>
         {{ template "monthly_table" .TableData }}
       </div>
-      <button style="margin-top: 20px" onclick="tableToImage('{{.Year}}')">
+      <button
+        style="margin-top: 20px"
+        onclick="tableToImage('{{.Year}}')"
+        id="download-button"
+      >
         Save as Image
       </button>
     </main>
