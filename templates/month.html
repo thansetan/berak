@@ -87,13 +87,7 @@
         <span>{{ getMonthName 1 }} {{add .Year 1}}</span>
         {{ end }} {{ end }}
       </nav>
-      <p style="text-align: center; margin: 0">
-        Current time:
-        <span id="currentTime"
-          >{{ .CurrentTime.Format "02 January 2006 15:04:05" }}</span
-        >
-        GMT+7
-      </p>
+      {{ template "current" . }}
     </header>
     <main style="text-align: center; min-height: 60vh">
       <div id="poop-log" style="padding: 5px 15px 30px 15px">

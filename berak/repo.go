@@ -10,6 +10,11 @@ import (
 	"github.com/thansetan/berak/model"
 )
 
+const (
+	dateLayout     = "2006-01-02"
+	dateTimeLayout = "2006-01-02 15:04:05"
+)
+
 type berakRepository struct {
 	db *sql.DB
 }
@@ -132,7 +137,7 @@ func (r *berakRepository) GetLastDataTimestamp(ctx context.Context, offset strin
 	if !lastPoopTime.Valid {
 		return time.Time{}, nil
 	}
-	lastInsertAt, err := time.Parse("2006-01-02 15:04:05", lastPoopTime.String)
+	lastInsertAt, err := time.Parse(dateTimeLayout, lastPoopTime.String)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("parse lastInsertedAt: %w", err)
 	}
@@ -155,15 +160,14 @@ func (r *berakRepository) GetLongestDayWithoutPoop(ctx context.Context, offset s
 
 	var l model.LongestDayWithoutPoop
 
-	timeLayout := "2006-01-02 15:04:05"
 	if startTime.Valid {
-		l.StartTime, err = time.Parse(timeLayout, startTime.String)
+		l.StartTime, err = time.Parse(dateTimeLayout, startTime.String)
 		if err != nil {
 			return model.LongestDayWithoutPoop{}, fmt.Errorf("parse startTime: %s", err)
 		}
 	}
 	if endTime.Valid {
-		l.EndTime, err = time.Parse(timeLayout, endTime.String)
+		l.EndTime, err = time.Parse(dateTimeLayout, endTime.String)
 		if err != nil {
 			return model.LongestDayWithoutPoop{}, fmt.Errorf("parse endTime: %s", err)
 		}
@@ -194,10 +198,10 @@ func (r *berakRepository) GetMostPoopInADay(ctx context.Context, offset string) 
 	return m, nil
 }
 
-func (r *berakRepository) GetLongestPoopStreak(ctx context.Context, offset string) (model.LongestPoopStreak, error) {
+func (r *berakRepository) GetLongestPoopStreak(ctx context.Context, offset string) (model.PoopStreak, error) {
 	var (
 		startDate, endDate sql.NullString
-		m                  model.LongestPoopStreak
+		m                  model.PoopStreak
 	)
 	err := r.db.QueryRowContext(ctx, `
 	WITH poop_per_day AS (SELECT DATE(timestamp, ?) poop_date,
@@ -217,21 +221,69 @@ func (r *berakRepository) GetLongestPoopStreak(ctx context.Context, offset strin
 	GROUP BY "group"
 	ORDER BY day_count DESC, end_date DESC LIMIT 1`, offset).Scan(&startDate, &endDate, &m.DayCount, &m.PoopCount)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return model.LongestPoopStreak{}, err
+		return model.PoopStreak{}, err
 	}
-	timeLayout := "2006-01-02"
 	if startDate.Valid {
-		m.StartDate, err = time.Parse(timeLayout, startDate.String)
+		m.StartDate, err = time.Parse(dateLayout, startDate.String)
 		if err != nil {
-			return model.LongestPoopStreak{}, fmt.Errorf("parse startDate: %w", err)
+			return model.PoopStreak{}, fmt.Errorf("parse startDate: %w", err)
 		}
 	}
 	if endDate.Valid {
-		m.EndDate, err = time.Parse(timeLayout, endDate.String)
+		m.EndDate, err = time.Parse(dateLayout, endDate.String)
 		if err != nil {
-			return model.LongestPoopStreak{}, fmt.Errorf("parse endDate: %w", err)
+			return model.PoopStreak{}, fmt.Errorf("parse endDate: %w", err)
 		}
 	}
 
 	return m, nil
+}
+
+func (r *berakRepository) GetCurrentStreak(ctx context.Context, offset string) (model.PoopStreak, error) {
+	var (
+		poopStreak         model.PoopStreak
+		startDate, endDate sql.NullString
+	)
+	err := r.db.QueryRowContext(ctx, `
+	WITH poop_per_day AS (
+	    SELECT
+	        DATE(timestamp, ?) poop_date,
+	        COUNT(timestamp) poop_count
+	    FROM berak
+	    GROUP BY poop_date
+	),
+	grouped_poops AS (
+	    SELECT
+	        poop_date,
+	        poop_count,
+	        JULIANDAY(poop_date) - ROW_NUMBER() OVER (ORDER BY poop_date) AS group_id
+	    FROM poop_per_day
+	)
+	SELECT
+	    MIN(poop_date) AS start_date,
+	    MAX(poop_date) AS end_date,
+	    COUNT(1) AS day_count,
+	    SUM(poop_count) poop_count
+	FROM grouped_poops
+	GROUP BY group_id
+	HAVING (MAX(poop_date) = DATE('now', ?)) OR (MAX(poop_date) = DATE('now', '-1 day', ?))
+	LIMIT 1
+	`, offset, offset, offset).Scan(&startDate, &endDate, &poopStreak.DayCount, &poopStreak.PoopCount)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return poopStreak, fmt.Errorf("fetching current streak: %w", err)
+	}
+	if startDate.Valid {
+		poopStreak.StartDate, err = time.Parse(dateLayout, startDate.String)
+		if err != nil {
+			return model.PoopStreak{}, fmt.Errorf("parse startDate: %w", err)
+		}
+	}
+	if endDate.Valid {
+		poopStreak.EndDate, err = time.Parse(dateLayout, endDate.String)
+		if err != nil {
+			return model.PoopStreak{}, fmt.Errorf("parse endDate: %w", err)
+		}
+	}
+
+	return poopStreak, nil
 }

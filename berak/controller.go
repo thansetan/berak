@@ -166,6 +166,16 @@ func (c *controller) sendPoopData(w http.ResponseWriter, r *http.Request, period
 	}
 	m["poop-footer"] = buf.String()
 
+	buf.Reset()
+	err = c.tmpl.ExecuteTemplate(&buf, "current", map[string]any{
+		"CurrentTime": time.Now(),
+		"Statistics": stats,
+	})
+	if err != nil {
+		return fmt.Errorf("error executing template[name=current]: %w", err)
+	}
+	m["poop-current"] = buf.String()
+
 	fmt.Fprint(w, "event:poopupdate\n")
 	jsonBytes, err := json.Marshal(m)
 	if err != nil {

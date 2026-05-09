@@ -1,6 +1,6 @@
 const highlight = () => {
   const highlightedRows = document.querySelectorAll(
-    "#poop-log > table > tbody > tr.highlighted"
+    "#poop-log > table > tbody > tr.highlighted",
   );
   highlightedRows.forEach((e) => e.classList.remove("highlighted"));
   const hash = location.hash.substring(1);
@@ -93,7 +93,7 @@ class SSEClient {
 
     const delay = Math.min(
       this.baseReconnectDelay * Math.pow(2, this.reconnectAttempts),
-      30000
+      30000,
     );
     this.reconnectAttempts++;
 
@@ -160,6 +160,7 @@ const listenToPoopEvent = (period, year, month, triggerHighlight = false) => {
           elem.outerHTML = v;
         }
       }
+      initCurrentTime();
       if (triggerHighlight) {
         highlight();
       }
@@ -204,7 +205,7 @@ const initCurrentTime = () => {
 
 const tableToImage = (year, month) => {
   const prevHiglightedRows = document.querySelectorAll(
-    "#poop-log > table > tbody > tr.highlighted"
+    "#poop-log > table > tbody > tr.highlighted",
   );
   prevHiglightedRows.forEach((e) => e.classList.remove("highlighted"));
 

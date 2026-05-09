@@ -1,0 +1,16 @@
+{{ define "current" }}
+<div id="poop-current">
+<p style="text-align: center; margin: 0">
+  Current time:
+  <span id="currentTime"
+    >{{.CurrentTime.Format "02 January 2006 15:04:05"}}</span
+  >
+  GMT+7
+</p>
+<p style="text-align: center; margin: 0">
+  Current streak: {{.Statistics.CurrentStreak.DayCount}} day{{ if ne .Statistics.CurrentStreak.DayCount 1 }}s{{ end }} {{ if and (not .Statistics.CurrentStreak.StartDate.IsZero) (not .Statistics.CurrentStreak.EndDate.IsZero) }}(<a href="/{{ .Statistics.CurrentStreak.StartDate.Year }}/{{ printf `%d` .Statistics.CurrentStreak.StartDate.Month }}#{{ .Statistics.CurrentStreak.StartDate.Day }}">{{.Statistics.CurrentStreak.StartDate.Format "02 Jan 2006"}}</a> -
+  <a href="/{{ .Statistics.CurrentStreak.EndDate.Year }}/{{ printf `%d` .Statistics.CurrentStreak.EndDate.Month }}#{{ .Statistics.CurrentStreak.EndDate.Day }}">{{.Statistics.CurrentStreak.EndDate.Format "02 Jan 2006"}}</a>){{ end }} with
+  {{.Statistics.CurrentStreak.PoopCount}} 💩{{ if ne .Statistics.CurrentStreak.PoopCount 1 }}s{{ end }} dropped!
+</p>
+</div>
+{{ end }}

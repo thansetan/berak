@@ -22,7 +22,8 @@ type TableData struct {
 type Statistics struct {
 	LastPoopAt            time.Time
 	LongestDayWithoutPoop LongestDayWithoutPoop
-	LongestPoopStreak     LongestPoopStreak
+	LongestPoopStreak     PoopStreak
+	CurrentStreak         PoopStreak
 	MostPoopInADay        MostPoopInADay
 }
 
@@ -93,11 +94,11 @@ func (m MostPoopInADay) IsEmpty() bool {
 	return m.Count < 1
 }
 
-type LongestPoopStreak struct {
+type PoopStreak struct {
 	StartDate, EndDate  time.Time
 	DayCount, PoopCount int
 }
 
-func (l LongestPoopStreak) IsEmpty() bool {
+func (l PoopStreak) IsEmpty() bool {
 	return l.DayCount < 2
 }
