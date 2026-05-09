@@ -168,8 +168,8 @@ func (c *controller) sendPoopData(w http.ResponseWriter, r *http.Request, period
 
 	buf.Reset()
 	err = c.tmpl.ExecuteTemplate(&buf, "current", map[string]any{
-		"CurrentTime": time.Now(),
-		"Statistics": stats,
+		"CurrentTime": c.now(),
+		"Statistics":  stats,
 	})
 	if err != nil {
 		return fmt.Errorf("error executing template[name=current]: %w", err)
