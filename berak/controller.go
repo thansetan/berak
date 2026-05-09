@@ -103,7 +103,7 @@ func (c *controller) Event(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *controller) sendPoopData(w http.ResponseWriter, r *http.Request, period string) error {
-	now := c.now()
+	now := c.svc.CurrentTime()
 	yearStr := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("year")))
 	year, err := strconv.ParseUint(yearStr, 10, 64)
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *controller) sendPoopData(w http.ResponseWriter, r *http.Request, period
 
 	buf.Reset()
 	err = c.tmpl.ExecuteTemplate(&buf, "current", map[string]any{
-		"CurrentTime": c.now(),
+		"CurrentTime": c.svc.CurrentTime(),
 		"Statistics":  stats,
 	})
 	if err != nil {
@@ -243,11 +243,6 @@ func (c *controller) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (c *controller) now() time.Time {
-	// UTC + 7
-	return time.Now().UTC().Add(7 * time.Hour)
-}
-
 func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	yearStr := vars["year"]
@@ -257,7 +252,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := c.now()
+	now := c.svc.CurrentTime()
 	if year < 1 || year > uint64(now.Year()) {
 		c.FourOFour(w, r)
 		return
@@ -291,7 +286,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	yearStr := vars["year"]
-	now := c.now()
+	now := c.svc.CurrentTime()
 	year, err := strconv.ParseUint(yearStr, 10, 64)
 	if err != nil || (year < 1 || year > uint64(now.Year())) {
 		c.FourOFour(w, r)

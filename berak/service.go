@@ -13,16 +13,16 @@ import (
 
 type berakService struct {
 	repo   *berakRepository
-	offset string
+	offset helper.Offset
 }
 
-func NewService(repo *berakRepository, offset string) *berakService {
+func NewService(repo *berakRepository, offset helper.Offset) *berakService {
 	return &berakService{repo, offset}
 }
 
 func (s *berakService) GetMonthly(ctx context.Context, now time.Time, year uint64) (model.TableData, error) {
 	var data model.TableData
-	monthlyData, err := s.repo.GetMonthlyByYear(ctx, year, s.offset)
+	monthlyData, err := s.repo.GetMonthlyByYear(ctx, year, s.offset.String())
 	if err != nil {
 		return data, fmt.Errorf("get monthly data: %w", err)
 	}
@@ -54,7 +54,7 @@ func (s *berakService) GetMonthly(ctx context.Context, now time.Time, year uint6
 
 func (s *berakService) GetDaily(ctx context.Context, now time.Time, year uint64, month uint64) (model.TableData, error) {
 	var data model.TableData
-	dailyData, err := s.repo.GetDailyByMonthAndYear(ctx, year, month, s.offset)
+	dailyData, err := s.repo.GetDailyByMonthAndYear(ctx, year, month, s.offset.String())
 	if err != nil {
 		return data, fmt.Errorf("get daily data: %w", err)
 	}
@@ -88,12 +88,12 @@ func (s *berakService) GetDaily(ctx context.Context, now time.Time, year uint64,
 
 func (s *berakService) GetStatistics(ctx context.Context) (model.Statistics, error) {
 	var data model.Statistics
-	mostPoopInADay, err := s.repo.GetMostPoopInADay(ctx, s.offset)
+	mostPoopInADay, err := s.repo.GetMostPoopInADay(ctx, s.offset.String())
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return data, fmt.Errorf("get most poop in a day: %w", err)
 	}
 
-	longestDayWithoutPoop, err := s.repo.GetLongestDayWithoutPoop(ctx, s.offset)
+	longestDayWithoutPoop, err := s.repo.GetLongestDayWithoutPoop(ctx, s.offset.String())
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return data, fmt.Errorf("get longest day without poop: %w", err)
 	}
@@ -101,11 +101,11 @@ func (s *berakService) GetStatistics(ctx context.Context) (model.Statistics, err
 	if err != nil {
 		return data, fmt.Errorf("get last poop time: %w", err)
 	}
-	longestPoopStreak, err := s.repo.GetLongestPoopStreak(ctx, s.offset)
+	longestPoopStreak, err := s.repo.GetLongestPoopStreak(ctx, s.offset.String())
 	if err != nil {
 		return data, fmt.Errorf("get longest poop streak: %w", err)
 	}
-	currentPoopStreak, err := s.repo.GetCurrentStreak(ctx, s.offset)
+	currentPoopStreak, err := s.repo.GetCurrentStreak(ctx, s.offset.String())
 	if err != nil {
 		return data, fmt.Errorf("get current poop streak: %w", err)
 	}
@@ -120,7 +120,7 @@ func (s *berakService) GetStatistics(ctx context.Context) (model.Statistics, err
 }
 
 func (s *berakService) GetLastPoopTime(ctx context.Context) (time.Time, error) {
-	t, err := s.repo.GetLastDataTimestamp(ctx, s.offset)
+	t, err := s.repo.GetLastDataTimestamp(ctx, s.offset.String())
 	if err != nil {
 		return time.Time{}, fmt.Errorf("get last poop timestamp: %w", err)
 	}
@@ -148,4 +148,8 @@ func (s *berakService) Add(ctx context.Context, date time.Time) error {
 		return fmt.Errorf("add poop with time: %w", err)
 	}
 	return nil
+}
+
+func (s *berakService) CurrentTime() time.Time {
+	return s.offset.Apply(time.Now().UTC())
 }

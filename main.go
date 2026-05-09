@@ -67,9 +67,13 @@ func main() {
 		logger.Error("failed to load template!", "error", err)
 		os.Exit(1)
 	}
-
+	offset, err := helper.NewOffset(os.Getenv("TIME_OFFSET"))
+	if err != nil {
+		logger.Error("failed to parse offset!", "error", err)
+		os.Exit(1)
+	}
 	repo := berak.NewRepo(db)
-	svc := berak.NewService(repo, os.Getenv("TIME_OFFSET"))
+	svc := berak.NewService(repo, offset)
 	controller := berak.NewController(svc, tmpl, logger)
 
 	r := mux.NewRouter()
