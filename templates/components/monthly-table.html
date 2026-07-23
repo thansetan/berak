@@ -8,7 +8,7 @@
   </thead>
   <tbody>
     {{ $total := 0 }} {{ with .Data }} {{ range . }}
-    <tr style="text-align: center">
+    <tr style="text-align: center" id="{{ .Period }}">
       <td style="border: 1px solid black">
         <a href="/{{$.Year}}/{{.Period}}">{{getMonthName .Period}}</a>
       </td>

@@ -176,8 +176,8 @@ func (r *berakRepository) GetLongestDayWithoutPoop(ctx context.Context, offset s
 	return l, nil
 }
 
-func (r *berakRepository) GetMostPoopInADay(ctx context.Context, offset string) (model.MostPoopInADay, error) {
-	var m model.MostPoopInADay
+func (r *berakRepository) GetMostPoopInADay(ctx context.Context, offset string) (model.MostPoopInADate, error) {
+	var m model.MostPoopInADate
 	err := r.db.QueryRowContext(ctx, `
 		WITH timestamp_with_offset AS (SELECT id,
 		                                      DATETIME(timestamp, ?) timestamp
@@ -192,7 +192,7 @@ func (r *berakRepository) GetMostPoopInADay(ctx context.Context, offset string) 
 		ORDER BY jumlah DESC, tahun DESC, bulan DESC, tanggal DESC
 		LIMIT 1`, offset).Scan(&m.Year, &m.Month, &m.Day, &m.Count)
 	if err != nil {
-		return model.MostPoopInADay{}, err
+		return model.MostPoopInADate{}, fmt.Errorf("fetching most poop in a day: %w", err)
 	}
 
 	return m, nil
@@ -286,4 +286,32 @@ func (r *berakRepository) GetCurrentStreak(ctx context.Context, offset string) (
 	}
 
 	return poopStreak, nil
+}
+
+func (r *berakRepository) GetMonthWithMostPoop(ctx context.Context, offset string) (model.MostPoopInADate, error) {
+	var m model.MostPoopInADate
+	err := r.db.QueryRowContext(ctx, `
+	WITH timestamp_with_offset AS (
+		SELECT
+			DATE(timestamp, ?) timestamp
+		FROM berak
+	),
+	grouped_per_year_month AS (
+		SELECT
+	        strftime('%Y', timestamp) as year,
+	        strftime('%m', timestamp) as month,
+			COUNT(1) cnt
+	    FROM timestamp_with_offset
+		GROUP BY year, month
+	)
+	SELECT
+		*
+	FROM grouped_per_year_month
+	ORDER BY cnt DESC LIMIT 1
+	`, offset).Scan(&m.Year, &m.Month, &m.Count)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return model.MostPoopInADate{}, fmt.Errorf("fetching month with most poop: %w", err)
+	}
+
+	return m, nil
 }

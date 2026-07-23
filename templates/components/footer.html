@@ -63,6 +63,16 @@
           >)
         </span>
       </li>
+      {{ end }} {{ if not .MostPoopInAMonth.IsEmpty }}
+      <li style="margin: 0">
+        Most 💩s in a month:
+        <span style="font-size: 0.85em"
+          >{{ .MostPoopInAMonth.Count }} times (<a
+            href="/{{ .MostPoopInAMonth.Year }}#{{ .MostPoopInAMonth.Month }}"
+          >{{ printf "%s %d" (getMonthName .MostPoopInAMonth.Month) .MostPoopInAMonth.Year }}</a
+          >)
+        </span>
+      </li>
       {{ end }}
     </ul>
   </div>

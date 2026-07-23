@@ -109,12 +109,17 @@ func (s *berakService) GetStatistics(ctx context.Context) (model.Statistics, err
 	if err != nil {
 		return data, fmt.Errorf("get current poop streak: %w", err)
 	}
+	monthWithMostPoop, err := s.repo.GetMonthWithMostPoop(ctx, s.offset.String())
+	if err != nil {
+		return data, fmt.Errorf("get month with most poop: %w", err)
+	}
 
 	data.LastPoopAt = lastPoopAt
 	data.MostPoopInADay = mostPoopInADay
 	data.LongestDayWithoutPoop = longestDayWithoutPoop
 	data.LongestPoopStreak = longestPoopStreak
 	data.CurrentStreak = currentPoopStreak
+	data.MostPoopInAMonth = monthWithMostPoop
 
 	return data, nil
 }

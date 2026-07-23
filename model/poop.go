@@ -24,7 +24,8 @@ type Statistics struct {
 	LongestDayWithoutPoop LongestDayWithoutPoop
 	LongestPoopStreak     PoopStreak
 	CurrentStreak         PoopStreak
-	MostPoopInADay        MostPoopInADay
+	MostPoopInADay        MostPoopInADate
+	MostPoopInAMonth      MostPoopInADate
 }
 
 type AggData struct {
@@ -79,18 +80,18 @@ func (l LongestDayWithoutPoop) String() string {
 	return sb.String()
 }
 
-type MostPoopInADay struct {
+type MostPoopInADate struct {
 	Year  int
 	Month int
 	Day   int
 	Count int
 }
 
-func (m MostPoopInADay) Path() string {
+func (m MostPoopInADate) Path() string {
 	return fmt.Sprintf("/%d/%d#%d", m.Year, m.Month, m.Day)
 }
 
-func (m MostPoopInADay) IsEmpty() bool {
+func (m MostPoopInADate) IsEmpty() bool {
 	return m.Count < 1
 }
 
