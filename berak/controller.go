@@ -276,6 +276,7 @@ func (c *controller) GetMonthly(w http.ResponseWriter, r *http.Request) {
 		Year:       int(year),
 		TableData:  tableData,
 		Statistics: stats,
+		BaseURL:    os.Getenv("BASE_URL"),
 	})
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to execute year template", "error", err.Error(), "remote_addr", r.RemoteAddr)
@@ -324,6 +325,7 @@ func (c *controller) GetDaily(w http.ResponseWriter, r *http.Request) {
 		Month:      int(month),
 		TableData:  tableData,
 		Statistics: stats,
+		BaseURL:    os.Getenv("BASE_URL"),
 	})
 	if err != nil {
 		c.logger.ErrorContext(r.Context(), "failed to execute month template", "error", err.Error(), "remote_addr", r.RemoteAddr)

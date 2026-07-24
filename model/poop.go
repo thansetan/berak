@@ -9,8 +9,9 @@ import (
 type Data struct {
 	TableData
 	Statistics
-	Year  int
-	Month int
+	Year    int
+	Month   int
+	BaseURL string
 }
 
 type TableData struct {
